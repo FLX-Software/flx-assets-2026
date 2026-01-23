@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 
 interface QRCodeDisplayProps {
@@ -10,6 +10,7 @@ interface QRCodeDisplayProps {
 
 const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({ value, assetName, brand, model }) => {
   const qrRef = useRef<HTMLDivElement>(null);
+  const [copied, setCopied] = useState(false);
 
   // Sicherstellen, dass value vorhanden ist
   if (!value) {
@@ -210,9 +211,34 @@ const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({ value, assetName, brand, 
     img.src = svgDataUrl;
   };
 
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (error) {
+      console.error('Fehler beim Kopieren:', error);
+      // Fallback für ältere Browser
+      const textArea = document.createElement('textarea');
+      textArea.value = value;
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-999999px';
+      document.body.appendChild(textArea);
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      } catch (err) {
+        console.error('Fallback-Kopieren fehlgeschlagen:', err);
+      }
+      document.body.removeChild(textArea);
+    }
+  };
+
   return (
     <div ref={qrRef} className="flex flex-col items-center justify-center py-8">
-      <div className="bg-white p-8 rounded-3xl border-2 border-slate-200 dark:border-slate-800 shadow-xl mb-6">
+      <div className="bg-white dark:bg-[#0d1117] p-8 rounded-3xl border-2 border-slate-200 dark:border-slate-800 shadow-xl mb-6">
         <div className="text-center mb-6">
           <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase italic tracking-tighter mb-2">
             {brand} {model}
@@ -222,7 +248,7 @@ const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({ value, assetName, brand, 
           </p>
         </div>
         
-        <div className="flex items-center justify-center bg-white p-6 rounded-2xl border border-slate-200 dark:border-slate-800 mb-6">
+        <div className="flex items-center justify-center bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 mb-6">
           <div id="qr-code-svg">
             <QRCodeSVG
               value={value}
@@ -235,10 +261,42 @@ const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({ value, assetName, brand, 
           </div>
         </div>
         
-        <div className="text-center">
-          <p className="text-sm font-black text-slate-900 dark:text-white uppercase italic tracking-tighter mb-1">
-            {value}
-          </p>
+        <div className="text-center space-y-3">
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
+            <p className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-2">
+              QR-Code Text
+            </p>
+            <div className="flex items-center justify-center gap-3">
+              <code className="text-base font-mono font-black text-slate-900 dark:text-white uppercase tracking-tighter bg-white dark:bg-[#010409] px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 flex-1 text-center">
+                {value}
+              </code>
+              <button
+                onClick={handleCopy}
+                className={`px-4 py-2 rounded-lg font-black text-xs uppercase tracking-tighter transition-all flex items-center gap-2 ${
+                  copied
+                    ? 'bg-emerald-500 text-white'
+                    : 'bg-blue-600 hover:bg-blue-700 text-white'
+                }`}
+                title={copied ? 'Kopiert!' : 'In Zwischenablage kopieren'}
+              >
+                {copied ? (
+                  <>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span>Kopiert!</span>
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    <span>Kopieren</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
           <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
             Scan to view details
           </p>
