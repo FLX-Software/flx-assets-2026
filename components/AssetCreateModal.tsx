@@ -1,13 +1,15 @@
 
 import React, { useState, useRef } from 'react';
 import { Asset, AssetType, AssetTypeLabels } from '../types';
+import { uploadAssetImage } from '../services/supabaseStorageService';
 
 interface AssetCreateModalProps {
   onClose: () => void;
   onSave: (newAsset: Asset) => void;
+  organizationId: string;
 }
 
-const AssetCreateModal: React.FC<AssetCreateModalProps> = ({ onClose, onSave }) => {
+const AssetCreateModal: React.FC<AssetCreateModalProps> = ({ onClose, onSave, organizationId }) => {
   const [formData, setFormData] = useState<Partial<Asset>>({
     brand: '',
     model: '',
@@ -23,6 +25,8 @@ const AssetCreateModal: React.FC<AssetCreateModalProps> = ({ onClose, onSave }) 
     repairHistory: []
   });
 
+  const [isUploading, setIsUploading] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -36,6 +40,8 @@ const AssetCreateModal: React.FC<AssetCreateModalProps> = ({ onClose, onSave }) 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setSelectedFile(file);
+      // Zeige Vorschau
       const reader = new FileReader();
       reader.onloadend = () => {
         setFormData(prev => ({
@@ -47,18 +53,43 @@ const AssetCreateModal: React.FC<AssetCreateModalProps> = ({ onClose, onSave }) 
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.brand || !formData.model || !formData.qrCode) {
       alert("Pflichtfelder fehlen!");
       return;
     }
 
-    const newAsset: Asset = {
-      ...formData as Asset,
-      id: `a-${Date.now()}`,
-    };
-    onSave(newAsset);
+    try {
+      setIsUploading(true);
+      let imageUrl = formData.imageUrl || 'https://picsum.photos/seed/newasset/400/300';
+
+      // Wenn eine Datei ausgewählt wurde, lade sie hoch
+      if (selectedFile) {
+        const tempAssetId = `temp-${Date.now()}`;
+        const uploadResult = await uploadAssetImage(selectedFile, tempAssetId, organizationId);
+        
+        if (uploadResult.error) {
+          alert(`Fehler beim Upload: ${uploadResult.error}`);
+          setIsUploading(false);
+          return;
+        }
+        
+        imageUrl = uploadResult.url;
+      }
+
+      const newAsset: Asset = {
+        ...formData as Asset,
+        id: `a-${Date.now()}`,
+        imageUrl,
+      };
+      onSave(newAsset);
+    } catch (error: any) {
+      console.error('Fehler beim Upload:', error);
+      alert(`Fehler beim Upload: ${error.message}`);
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   return (
@@ -134,8 +165,17 @@ const AssetCreateModal: React.FC<AssetCreateModalProps> = ({ onClose, onSave }) 
             </div>
 
             <div className="md:col-span-2 flex gap-4 mt-4 pt-6 border-t border-slate-100 dark:border-slate-800">
-               <button type="button" onClick={onClose} className="flex-1 py-4 bg-slate-100 dark:bg-slate-800 text-slate-500 font-black rounded-2xl uppercase text-xs tracking-widest italic">Abbrechen</button>
-               <button type="submit" className="flex-[2] py-4 bg-blue-600 text-white font-black rounded-2xl uppercase text-xs tracking-widest italic shadow-xl shadow-blue-600/30">Asset registrieren</button>
+               <button type="button" onClick={onClose} disabled={isUploading} className="flex-1 py-4 bg-slate-100 dark:bg-slate-800 text-slate-500 font-black rounded-2xl uppercase text-xs tracking-widest italic disabled:opacity-50">Abbrechen</button>
+               <button type="submit" disabled={isUploading} className="flex-[2] py-4 bg-blue-600 text-white font-black rounded-2xl uppercase text-xs tracking-widest italic shadow-xl shadow-blue-600/30 disabled:opacity-50 flex items-center justify-center gap-2">
+                 {isUploading ? (
+                   <>
+                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                     Upload...
+                   </>
+                 ) : (
+                   'Asset registrieren'
+                 )}
+               </button>
             </div>
           </form>
         </div>

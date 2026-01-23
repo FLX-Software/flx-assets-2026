@@ -3,6 +3,7 @@ import React, { useState, useRef, lazy, Suspense } from 'react';
 import { Asset, AssetType, LoanRecord, RepairEntry, UserRole } from '../types';
 import MaintenanceTimeline from './MaintenanceTimeline';
 import { createMaintenanceEvent, updateMaintenanceEvent, deleteMaintenanceEvent } from '../services/supabaseAssetService';
+import { uploadAssetImage, deleteAssetImage } from '../services/supabaseStorageService';
 
 // Lazy Loading für QRCodeDisplay um Initial-Loading zu vermeiden
 const QRCodeDisplay = lazy(() => import('./QRCodeDisplay'));
@@ -23,6 +24,8 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
   const [editMode, setEditMode] = useState(false);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [formData, setFormData] = useState<Asset>({ ...asset });
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -36,6 +39,8 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setSelectedFile(file);
+      // Zeige Vorschau
       const reader = new FileReader();
       reader.onloadend = () => {
         setFormData(prev => ({
@@ -44,6 +49,43 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
         }));
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  const handleImageUpload = async () => {
+    if (!selectedFile || !isAdmin) return;
+
+    try {
+      setIsUploadingImage(true);
+      
+      // Lösche altes Bild (falls es von Supabase Storage ist)
+      const oldImageUrl = asset.imageUrl;
+      if (oldImageUrl && oldImageUrl.includes('supabase.co/storage')) {
+        await deleteAssetImage(oldImageUrl);
+      }
+
+      // Lade neues Bild hoch
+      const uploadResult = await uploadAssetImage(selectedFile, formData.id, organizationId);
+      
+      if (uploadResult.error) {
+        alert(`Fehler beim Upload: ${uploadResult.error}`);
+        setIsUploadingImage(false);
+        return;
+      }
+
+      // Aktualisiere Asset mit neuer Bild-URL
+      const updatedAsset = { ...formData, imageUrl: uploadResult.url };
+      setFormData(updatedAsset);
+      setSelectedFile(null);
+      
+      // Speichere Asset
+      await onSave(updatedAsset);
+      
+    } catch (error: any) {
+      console.error('Fehler beim Bild-Upload:', error);
+      alert(`Fehler beim Upload: ${error.message}`);
+    } finally {
+      setIsUploadingImage(false);
     }
   };
 
@@ -62,9 +104,16 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
     setFormData(updatedAsset);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSave(formData);
+    
+    // Wenn ein neues Bild ausgewählt wurde, lade es zuerst hoch
+    if (selectedFile && isAdmin) {
+      await handleImageUpload();
+    } else {
+      onSave(formData);
+    }
+    
     setEditMode(false);
   };
 
@@ -189,8 +238,27 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
                   )}
                   {editMode && (
                     <div className="flex gap-2 pt-4">
-                      <button type="button" onClick={() => { setEditMode(false); setFormData({...asset}); }} className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-black rounded-xl uppercase text-[10px] tracking-tighter italic">Abbrechen</button>
-                      <button type="submit" className="flex-1 py-3 bg-blue-600 text-white font-black rounded-xl uppercase text-[10px] tracking-tighter italic shadow-lg shadow-blue-600/20">Sichern</button>
+                      <button type="button" onClick={() => { setEditMode(false); setFormData({...asset}); setSelectedFile(null); }} disabled={isUploadingImage} className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-black rounded-xl uppercase text-[10px] tracking-tighter italic disabled:opacity-50">Abbrechen</button>
+                      <button type="submit" disabled={isUploadingImage} className="flex-1 py-3 bg-blue-600 text-white font-black rounded-xl uppercase text-[10px] tracking-tighter italic shadow-lg shadow-blue-600/20 disabled:opacity-50 flex items-center justify-center gap-2">
+                        {isUploadingImage ? (
+                          <>
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                            Upload...
+                          </>
+                        ) : (
+                          'Sichern'
+                        )}
+                      </button>
+                    </div>
+                  )}
+                  {editMode && selectedFile && (
+                    <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-900">
+                      <p className="text-xs font-bold text-blue-700 dark:text-blue-300">
+                        📷 Neues Bild ausgewählt: {selectedFile.name}
+                      </p>
+                      <p className="text-[10px] text-blue-600 dark:text-blue-400 mt-1">
+                        Das Bild wird beim Speichern hochgeladen
+                      </p>
                     </div>
                   )}
                 </div>

@@ -11,6 +11,7 @@ import Login from './components/Login';
 import { processQRScan } from './services/supabaseInventoryService';
 import { getCurrentUser, signOut, onAuthStateChange } from './services/supabaseAuthService';
 import { fetchAssets, createAsset, updateAsset, deleteAsset } from './services/supabaseAssetService';
+import { deleteAssetImage } from './services/supabaseStorageService';
 import { fetchLoans } from './services/supabaseLoanService';
 import { fetchOrganizationMembers } from './services/supabaseOrganizationService';
 
@@ -202,6 +203,17 @@ const App: React.FC = () => {
     
     try {
       setIsLoading(true);
+      
+      // Lösche Bild aus Storage (falls vorhanden)
+      if (assetToDelete?.imageUrl && assetToDelete.imageUrl.includes('supabase.co/storage')) {
+        try {
+          await deleteAssetImage(assetToDelete.imageUrl);
+        } catch (imageError) {
+          console.warn('Fehler beim Löschen des Bildes:', imageError);
+          // Weiter mit Asset-Löschung auch wenn Bild-Löschung fehlschlägt
+        }
+      }
+      
       await deleteAsset(assetId);
       
       // Assets neu laden
@@ -367,7 +379,8 @@ const App: React.FC = () => {
       {isCreateModalOpen && (
         <AssetCreateModal 
           onClose={() => setIsCreateModalOpen(false)} 
-          onSave={handleCreateAsset} 
+          onSave={handleCreateAsset}
+          organizationId={currentUser.organizationId || ''}
         />
       )}
 
