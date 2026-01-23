@@ -181,7 +181,11 @@ const App: React.FC = () => {
     
     try {
       setIsLoading(true);
+      console.log('💾 Erstelle Asset in Supabase...', { id: newAsset.id, brand: newAsset.brand });
+      
       await createAsset(newAsset, currentUser.organizationId);
+      
+      console.log('✅ Asset erstellt, lade Assets neu...');
       
       // Assets neu laden
       const updatedAssets = await fetchAssets(currentUser.organizationId);
@@ -189,7 +193,7 @@ const App: React.FC = () => {
       setIsCreateModalOpen(false);
       showNotification(`Neues Asset "${newAsset.brand} ${newAsset.model}" wurde angelegt.`, 'success');
     } catch (error: any) {
-      console.error('Fehler beim Erstellen:', error);
+      console.error('❌ Fehler beim Erstellen:', error);
       showNotification(error.message || 'Fehler beim Erstellen.', 'error');
     } finally {
       setIsLoading(false);

@@ -52,7 +52,10 @@ export async function fetchAsset(assetId: string): Promise<Asset | null> {
  * Erstellt ein neues Asset
  */
 export async function createAsset(asset: Asset, organizationId: string): Promise<Asset> {
+  console.log('💾 createAsset gestartet', { assetId: asset.id, brand: asset.brand, organizationId });
+  
   const dbAsset = assetToDBAsset(asset, organizationId);
+  console.log('💾 DB-Asset vorbereitet', { id: dbAsset.id, image_url: dbAsset.image_url });
 
   const { data, error } = await supabase
     .from('assets')
@@ -61,10 +64,11 @@ export async function createAsset(asset: Asset, organizationId: string): Promise
     .single();
 
   if (error || !data) {
-    console.error('Fehler beim Erstellen des Assets:', error);
+    console.error('❌ Fehler beim Erstellen des Assets:', error);
     throw error || new Error('Asset konnte nicht erstellt werden');
   }
 
+  console.log('✅ Asset erfolgreich erstellt', { id: data.id });
   return dbAssetToAsset(data, []);
 }
 

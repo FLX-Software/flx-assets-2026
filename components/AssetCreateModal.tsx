@@ -64,29 +64,44 @@ const AssetCreateModal: React.FC<AssetCreateModalProps> = ({ onClose, onSave, or
       setIsUploading(true);
       let imageUrl = formData.imageUrl || 'https://picsum.photos/seed/newasset/400/300';
 
+      // Generiere Asset-ID VOR dem Upload
+      const assetId = `a-${Date.now()}`;
+
       // Wenn eine Datei ausgewählt wurde, lade sie hoch
       if (selectedFile) {
-        const tempAssetId = `temp-${Date.now()}`;
-        const uploadResult = await uploadAssetImage(selectedFile, tempAssetId, organizationId);
+        console.log('📤 Starte Bild-Upload...', { fileName: selectedFile.name, size: selectedFile.size });
+        
+        // Timeout für Upload (30 Sekunden)
+        const uploadPromise = uploadAssetImage(selectedFile, assetId, organizationId);
+        const timeoutPromise = new Promise<{ url: null; error: string }>((resolve) => {
+          setTimeout(() => resolve({ url: null, error: 'Upload-Timeout: Das Bild konnte nicht innerhalb von 30 Sekunden hochgeladen werden' }), 30000);
+        });
+        
+        const uploadResult = await Promise.race([uploadPromise, timeoutPromise]);
         
         if (uploadResult.error) {
+          console.error('❌ Upload-Fehler:', uploadResult.error);
           alert(`Fehler beim Upload: ${uploadResult.error}`);
           setIsUploading(false);
           return;
         }
         
+        console.log('✅ Upload erfolgreich:', uploadResult.url);
         imageUrl = uploadResult.url;
       }
 
       const newAsset: Asset = {
         ...formData as Asset,
-        id: `a-${Date.now()}`,
+        id: assetId,
         imageUrl,
       };
-      onSave(newAsset);
+      
+      console.log('💾 Speichere Asset...', { id: assetId, brand: newAsset.brand, model: newAsset.model });
+      await onSave(newAsset);
+      console.log('✅ Asset gespeichert');
     } catch (error: any) {
-      console.error('Fehler beim Upload:', error);
-      alert(`Fehler beim Upload: ${error.message}`);
+      console.error('❌ Fehler beim Upload/Speichern:', error);
+      alert(`Fehler: ${error.message || 'Unbekannter Fehler'}`);
     } finally {
       setIsUploading(false);
     }

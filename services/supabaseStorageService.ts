@@ -15,6 +15,8 @@ export async function uploadAssetImage(
   organizationId: string
 ): Promise<{ url: string; error: null } | { url: null; error: string }> {
   try {
+    console.log('📤 uploadAssetImage gestartet', { fileName: file.name, size: file.size, assetId, organizationId });
+    
     // Validiere Dateityp
     if (!file.type.startsWith('image/')) {
       return { url: null, error: 'Nur Bilddateien sind erlaubt' };
@@ -31,6 +33,8 @@ export async function uploadAssetImage(
     const timestamp = Date.now();
     const fileName = `${organizationId}/${assetId}-${timestamp}.${fileExtension}`;
 
+    console.log('📤 Upload zu Supabase Storage...', { bucket: BUCKET_NAME, fileName });
+
     // Upload zu Supabase Storage
     const { data, error } = await supabase.storage
       .from(BUCKET_NAME)
@@ -40,9 +44,11 @@ export async function uploadAssetImage(
       });
 
     if (error) {
-      console.error('Upload-Fehler:', error);
-      return { url: null, error: error.message };
+      console.error('❌ Upload-Fehler:', error);
+      return { url: null, error: error.message || 'Upload fehlgeschlagen' };
     }
+
+    console.log('✅ Upload erfolgreich, hole öffentliche URL...');
 
     // Hole öffentliche URL
     const { data: urlData } = supabase.storage
@@ -50,12 +56,14 @@ export async function uploadAssetImage(
       .getPublicUrl(fileName);
 
     if (!urlData?.publicUrl) {
+      console.error('❌ Konnte URL nicht generieren');
       return { url: null, error: 'Konnte URL nicht generieren' };
     }
 
+    console.log('✅ Upload komplett, URL:', urlData.publicUrl);
     return { url: urlData.publicUrl, error: null };
   } catch (error: any) {
-    console.error('Unerwarteter Fehler beim Upload:', error);
+    console.error('❌ Unerwarteter Fehler beim Upload:', error);
     return { url: null, error: error.message || 'Upload fehlgeschlagen' };
   }
 }
