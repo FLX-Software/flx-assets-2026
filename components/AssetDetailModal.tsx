@@ -1,8 +1,11 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, lazy, Suspense } from 'react';
 import { Asset, AssetType, LoanRecord, RepairEntry, UserRole } from '../types';
 import MaintenanceTimeline from './MaintenanceTimeline';
 import { createMaintenanceEvent, updateMaintenanceEvent, deleteMaintenanceEvent } from '../services/supabaseAssetService';
+
+// Lazy Loading für QRCodeDisplay um Initial-Loading zu vermeiden
+const QRCodeDisplay = lazy(() => import('./QRCodeDisplay'));
 
 interface AssetDetailModalProps {
   asset: Asset;
@@ -240,13 +243,19 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
           )}
 
           {activeTab === 'qr' && (
-            <div className="flex flex-col items-center justify-center py-10 animate-in zoom-in-95 duration-300">
-               <div className="bg-white p-8 rounded-3xl border-2 border-slate-200 dark:border-slate-800 shadow-xl mb-6">
-                  <div className="w-48 h-48 bg-slate-900 flex items-center justify-center rounded-xl">
-                     <svg className="w-40 h-40 text-white" viewBox="0 0 24 24" fill="currentColor"><path d="M3 3h8v8H3V3zm2 2v4h4V5H5zm8-2h8v8h-8V3zm2 2v4h4V5h-4zM3 13h8v8H3v-8zm2 2v4h4v-4H5zm13-2h3v2h-3v-2zm-3 0h2v2h-2v-2zm3 3h3v2h-3v-2zm-3 3h2v2h-2v-2zm3-3h3v2h-3v-2zm-3 0h2v2h-2v-2zm3 3h3v2h-3v-2z" /></svg>
-                  </div>
-               </div>
-               <p className="font-black text-slate-900 dark:text-white uppercase italic tracking-tighter text-xl">{formData.qrCode}</p>
+            <div className="animate-in zoom-in-95 duration-300">
+              <Suspense fallback={
+                <div className="flex items-center justify-center py-20">
+                  <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                </div>
+              }>
+                <QRCodeDisplay
+                  value={formData.qrCode || ''}
+                  assetName={`${formData.brand} ${formData.model}`}
+                  brand={formData.brand}
+                  model={formData.model}
+                />
+              </Suspense>
             </div>
           )}
         </div>
