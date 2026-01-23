@@ -1,0 +1,90 @@
+
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FLX Assets PWA</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            colors: {
+              flx: {
+                blue: '#0091FF',
+                dark: '#010409'
+              }
+            }
+          }
+        }
+      }
+    </script>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0091FF">
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+      body { font-family: 'Inter', sans-serif; }
+      
+      /* Custom styles for html5-qrcode to support dark mode */
+      #qr-reader {
+        border: none !important;
+        background: transparent !important;
+      }
+      #qr-reader__dashboard {
+        padding: 20px !important;
+        background: transparent !important;
+        color: inherit !important;
+      }
+      #qr-reader__status_span {
+        font-size: 10px !important;
+        text-transform: uppercase !important;
+        font-weight: 800 !important;
+        letter-spacing: 0.1em !important;
+      }
+      #qr-reader__camera_selection, #qr-reader__dashboard_btn {
+        background: #0091FF !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 12px !important;
+        padding: 10px 20px !important;
+        font-weight: 800 !important;
+        text-transform: uppercase !important;
+        font-style: italic !important;
+        font-size: 11px !important;
+        margin: 5px !important;
+      }
+      .dark #qr-reader__dashboard { color: #94a3b8 !important; }
+      #qr-reader video { border-radius: 20px !important; }
+
+      .flx-gradient-text {
+        background: linear-gradient(135deg, #0091FF 0%, #0056FF 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+      .flx-bg-dark { background-color: #010409; }
+      .flx-border-blue { border-color: #0091FF; }
+      
+      /* Custom Scrollbar */
+      .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+      .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+      .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
+      .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@^19.2.3",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "html5-qrcode": "https://esm.sh/html5-qrcode@^2.3.8"
+  }
+}
+</script>
+</head>
+<body class="bg-slate-50 text-slate-900 transition-colors duration-300">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+
+{
+  "short_name": "FLX Assets",
+  "name": "FLX Software Assets Tracking",
+  "icons": [
+    {
+      "src": "https://picsum.photos/192/192?grayscale",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "https://picsum.photos/512/512?grayscale",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#0091FF",
+  "background_color": "#010409"
+}

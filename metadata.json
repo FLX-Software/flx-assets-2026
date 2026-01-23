@@ -1,0 +1,7 @@
+{
+  "name": " FLX Assets - Profi-Inventarverwaltung",
+  "description": "Die exklusive Lösung für FLX Software: Assets tracken, QR-Codes scannen und Werkzeuge effizient verwalten.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
