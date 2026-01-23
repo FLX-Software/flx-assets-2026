@@ -55,7 +55,11 @@ export const INITIAL_ASSETS: Asset[] = [
     currentUserId: null,
     status: 'available',
     lastMaintenance: '2023-05-20',
-    nextMaintenance: '2024-05-20'
+    nextMaintenance: '2024-05-20',
+    maintenanceIntervalMonths: 12,
+    repairHistory: [
+      { id: 'r1', date: '2023-05-20', description: 'Sägeblatt gewechselt & Justierung', performer: 'Service Partner Nord', cost: 120.50 }
+    ]
   },
   {
     id: 'a2',
@@ -70,7 +74,10 @@ export const INITIAL_ASSETS: Asset[] = [
     currentUserId: 'u2',
     status: 'loaned',
     lastMaintenance: '2023-11-10',
-    nextMaintenance: '2024-11-10'
+    nextMaintenance: '2024-03-15', // Critical!
+    lastUvv: '2023-03-01',
+    maintenanceIntervalMonths: 6,
+    repairHistory: []
   },
   {
     id: 'a3',
@@ -84,8 +91,12 @@ export const INITIAL_ASSETS: Asset[] = [
     qrCode: 'QR_SPRINTER_VB1',
     currentUserId: null,
     status: 'available',
-    lastMaintenance: '2024-01-05',
-    nextMaintenance: '2025-01-05'
+    licensePlate: 'B-FLX 101',
+    nextTuev: '2024-03-20', // Critical!
+    maintenanceIntervalMonths: 24,
+    repairHistory: [
+      { id: 'r2', date: '2023-12-10', description: 'Ölwechsel & Bremsen neu', performer: 'Mercedes Werkstatt', cost: 850.00 }
+    ]
   },
   {
     id: 'a4',
@@ -99,7 +110,7 @@ export const INITIAL_ASSETS: Asset[] = [
     qrCode: 'QR_MAKITA_BOHR',
     currentUserId: 'u2',
     status: 'loaned',
-    lastMaintenance: '2023-12-01',
-    nextMaintenance: '2024-12-01'
+    maintenanceIntervalMonths: 12,
+    repairHistory: []
   }
 ];

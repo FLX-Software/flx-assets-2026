@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Asset, User, AssetType } from '../types';
 import AssetCard from './AssetCard';
+import { getMaintenanceStatus } from '../services/maintenanceService';
 
 interface AdminDashboardProps {
   assets: Asset[];
@@ -22,6 +23,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ assets, users, onShowDe
     const matchesSearch = (a.brand + ' ' + a.model).toLowerCase().includes(searchQuery.toLowerCase());
     return matchesType && matchesStatus && matchesSearch;
   });
+
+  const criticalAssets = assets.filter(a => getMaintenanceStatus(a).isCritical);
 
   const stats = {
     total: assets.length,
@@ -62,6 +65,54 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ assets, users, onShowDe
           </button>
         </div>
       </header>
+
+      {/* Critical Section */}
+      {criticalAssets.length > 0 && (
+        <section className="mb-10 animate-in slide-in-from-top duration-500">
+           <div className="bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/30 rounded-3xl p-6">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 bg-rose-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-rose-600/20">
+                  <svg className="w-6 h-6 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                </div>
+                <div>
+                  <h2 className="text-xl font-black text-rose-900 dark:text-rose-100 uppercase italic tracking-tighter leading-none">GEFAHRENZONE</h2>
+                  <p className="text-rose-600 dark:text-rose-400 text-[10px] font-bold uppercase tracking-widest mt-1">{criticalAssets.length} Assets benötigen sofortige Aufmerksamkeit</p>
+                </div>
+              </div>
+              <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar">
+                {criticalAssets.map(asset => (
+                  <div 
+                    key={asset.id} 
+                    onClick={() => onShowDetails(asset)}
+                    className="min-w-[280px] bg-white dark:bg-[#0d1117] p-4 rounded-2xl border border-rose-200 dark:border-rose-900/50 shadow-sm cursor-pointer hover:border-rose-500 transition-colors"
+                  >
+                    <div className="flex items-center gap-4 mb-3">
+                      <img src={asset.imageUrl} className="w-12 h-12 rounded-xl object-cover" />
+                      <div>
+                        <p className="font-black text-xs uppercase italic dark:text-white">{asset.brand} {asset.model}</p>
+                        <p className="text-[10px] font-bold text-rose-600">{asset.licensePlate || asset.qrCode}</p>
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      {getMaintenanceStatus(asset).statusMap.tuev !== 'ok' && (
+                        <div className="flex justify-between text-[10px] font-bold">
+                           <span className="text-slate-400 uppercase">TÜV / AU</span>
+                           <span className="text-rose-600">{asset.nextTuev}</span>
+                        </div>
+                      )}
+                      {getMaintenanceStatus(asset).statusMap.maintenance !== 'ok' && (
+                        <div className="flex justify-between text-[10px] font-bold">
+                           <span className="text-slate-400 uppercase">Wartung</span>
+                           <span className="text-rose-600">{asset.nextMaintenance}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+           </div>
+        </section>
+      )}
 
       {/* Stats row */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
@@ -128,7 +179,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ assets, users, onShowDe
               key={asset.id} 
               asset={asset} 
               assignedUser={users.find(u => u.id === asset.currentUserId)} 
-              // Fix: Property name should be onDetails as defined in AssetCardProps
               onDetails={onShowDetails}
             />
           ))

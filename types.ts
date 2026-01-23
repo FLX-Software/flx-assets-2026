@@ -10,6 +10,14 @@ export enum UserRole {
   STAFF = 'Mitarbeiter'
 }
 
+export interface RepairEntry {
+  id: string;
+  date: string;
+  description: string;
+  cost?: number;
+  performer: string;
+}
+
 export interface Asset {
   id: string;
   brand: string;
@@ -20,17 +28,23 @@ export interface Asset {
   condition: number; // 1-5
   imageUrl: string;
   qrCode: string;
-  currentUserId: string | null; // ID of user who currently has it
+  currentUserId: string | null;
   status: 'available' | 'loaned';
   lastMaintenance?: string;
   nextMaintenance?: string;
+  // New Fields
+  nextTuev?: string; // For vehicles/trailers
+  lastUvv?: string; // Safety check
+  maintenanceIntervalMonths: number;
+  repairHistory: RepairEntry[];
+  licensePlate?: string; // Only for vehicles
 }
 
 export interface User {
   id: string;
   firstName: string;
   lastName: string;
-  name: string; // Display name
+  name: string;
   email: string;
   username: string;
   password?: string;
@@ -44,12 +58,4 @@ export interface LoanRecord {
   userName: string;
   timestampOut: string;
   timestampIn?: string;
-}
-
-export interface MaintenanceRecord {
-  id: string;
-  assetId: string;
-  date: string;
-  description: string;
-  performer: string;
 }
