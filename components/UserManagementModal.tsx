@@ -92,11 +92,15 @@ const UserManagementModal: React.FC<UserManagementModalProps> = ({ users, organi
 
       console.log('✅ UserManagementModal: User erfolgreich erstellt');
 
-      // User zur Liste hinzufügen
+      // User zur Liste hinzufügen (mit Passwort für E-Mail)
+      const userWithPassword = {
+        ...result.user,
+        password: formData.password // Passwort für E-Mail-Simulation
+      };
       onUpdateUsers([...users, result.user]);
       
       if (sendImmediately) {
-        simulateEmailSend(result.user);
+        simulateEmailSend(userWithPassword);
       } else {
         onShowNotification(`Benutzer ${result.user.name} wurde erfolgreich angelegt.`, 'success');
       }
