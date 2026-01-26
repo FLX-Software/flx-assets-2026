@@ -66,6 +66,7 @@ export async function signUp(
     // Versuche Profil zu erstellen - verwende SQL-Funktion um RLS zu umgehen
     // Falls Funktion nicht existiert, verwende direkten INSERT mit Retry
     let profileError = null;
+    let profileCreated = false;
     
     try {
       // Versuche RPC-Funktion (falls vorhanden) mit Timeout
