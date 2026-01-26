@@ -69,21 +69,31 @@ CREATE POLICY "users_insert_own_profile"
 -- Admins können Profile für User in ihrer Organisation erstellen
 -- WICHTIG: Prüft nur ob der Admin Admin ist, nicht ob der Target-User bereits Mitglied ist
 -- (da wir das Profil VOR der Membership erstellen)
+-- Verwende SECURITY DEFINER Funktion um Rekursion zu vermeiden
+CREATE OR REPLACE FUNCTION public.is_user_admin()
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+STABLE
+AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1
+    FROM public.organization_members om
+    WHERE om.user_id = auth.uid()
+      AND om.role = 'admin'
+      AND om.is_active = true
+  );
+END;
+$$;
+
 CREATE POLICY "admins_insert_org_profiles"
   ON public.profiles
   FOR INSERT
   WITH CHECK (
     auth.role() = 'service_role'
     OR id = auth.uid() -- Eigenes Profil
-    OR EXISTS (
-      -- Admin kann Profile erstellen, wenn er Admin in mindestens einer Organisation ist
-      -- (Die Membership wird danach erstellt, daher keine Prüfung auf Target-User)
-      SELECT 1
-      FROM public.organization_members om
-      WHERE om.user_id = auth.uid()
-        AND om.role = 'admin'
-        AND om.is_active = true
-    )
+    OR public.is_user_admin() -- Admin kann Profile erstellen
   );
 
 -- Service Role hat vollen Zugriff
