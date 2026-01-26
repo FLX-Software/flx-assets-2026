@@ -27,13 +27,26 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [infoSubTab, setInfoSubTab] = useState<'basic' | 'general' | 'vehicle' | 'machine' | 'tool' | 'financial'>('basic');
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: name === 'purchaseYear' || name === 'condition' || name === 'maintenanceIntervalMonths' ? parseInt(value) : value
-    }));
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value, type } = e.target;
+    const checked = (e.target as HTMLInputElement).checked;
+    
+    setFormData(prev => {
+      if (type === 'checkbox') {
+        return { ...prev, [name]: checked };
+      }
+      if (name === 'purchaseYear' || name === 'condition' || name === 'maintenanceIntervalMonths' || 
+          name === 'mileage' || name === 'purchasePrice' || name === 'residualValue' || 
+          name === 'depreciationYears' || name === 'vehicleTaxMonthly') {
+        return { ...prev, [name]: value ? parseFloat(value) : undefined };
+      }
+      if (name === 'tags') {
+        return { ...prev, [name]: value ? value.split(',').map(t => t.trim()).filter(Boolean) : undefined };
+      }
+      return { ...prev, [name]: value || undefined };
+    });
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -182,87 +195,707 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
               </div>
             </div>
           ) : activeTab === 'info' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-in fade-in duration-300">
-              <div className="space-y-4">
-                <div className="relative rounded-2xl overflow-hidden aspect-video shadow-inner bg-slate-100 dark:bg-slate-900 group border border-slate-200 dark:border-slate-800">
-                  <img src={formData.imageUrl} alt={formData.model} className="w-full h-full object-cover" />
-                  {editMode && (
-                    <div onClick={() => fileInputRef.current?.click()} className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center cursor-pointer opacity-100 transition-opacity">
-                      <svg className="w-10 h-10 text-white mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                      <span className="text-white text-[10px] font-black uppercase tracking-widest">Bild ändern</span>
+            <div className="space-y-6 animate-in fade-in duration-300">
+              {/* Bild & Basis-Info */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="relative rounded-2xl overflow-hidden aspect-video shadow-inner bg-slate-100 dark:bg-slate-900 group border border-slate-200 dark:border-slate-800">
+                    <img src={formData.imageUrl} alt={formData.model} className="w-full h-full object-cover" />
+                    {editMode && (
+                      <div onClick={() => fileInputRef.current?.click()} className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center cursor-pointer opacity-100 transition-opacity">
+                        <svg className="w-10 h-10 text-white mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                        <span className="text-white text-[10px] font-black uppercase tracking-widest">Bild ändern</span>
+                      </div>
+                    )}
+                    <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageChange} />
+                  </div>
+                  {isAdmin && formData.status === 'loaned' && !editMode && (
+                    <button onClick={() => onReturn?.(formData)} className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-2xl uppercase text-[10px] tracking-widest italic shadow-xl shadow-emerald-600/20 transition-all flex items-center justify-center gap-2">Zurückgeben</button>
+                  )}
+                  {formData.type === AssetType.VEHICLE && formData.licensePlate && (
+                    <div className="p-4 bg-slate-900 border border-slate-800 rounded-2xl flex items-center justify-between">
+                      <div>
+                        <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Kennzeichen</p>
+                        <p className="text-lg font-black text-white italic tracking-tighter">{formData.licensePlate}</p>
+                      </div>
+                      <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center">
+                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
+                      </div>
                     </div>
                   )}
-                  <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageChange} />
                 </div>
-                {isAdmin && formData.status === 'loaned' && !editMode && (
-                  <button onClick={() => onReturn?.(formData)} className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-2xl uppercase text-[10px] tracking-widest italic shadow-xl shadow-emerald-600/20 transition-all flex items-center justify-center gap-2">Zurückgeben</button>
-                )}
-                {formData.type === AssetType.VEHICLE && (
-                  <div className="p-4 bg-slate-900 border border-slate-800 rounded-2xl flex items-center justify-between">
-                    <div>
-                      <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Kennzeichen</p>
-                      <p className="text-lg font-black text-white italic tracking-tighter">{formData.licensePlate || 'K.A.'}</p>
-                    </div>
-                    <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center">
-                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
-                    </div>
+
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="flex justify-between items-center mb-2">
+                    <h3 className="text-sm font-black text-slate-800 dark:text-slate-200 uppercase italic tracking-tighter">Details</h3>
+                    {isAdmin && !editMode && (
+                      <div className="flex gap-4">
+                        <button type="button" onClick={() => setIsConfirmingDelete(true)} className="text-[10px] font-black text-rose-500 uppercase italic tracking-widest hover:underline">Löschen</button>
+                        <button type="button" onClick={() => setEditMode(true)} className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase italic tracking-widest hover:underline">Ändern</button>
+                      </div>
+                    )}
                   </div>
-                )}
+
+                  {/* Info Sub-Tabs */}
+                  {!editMode && (
+                    <div className="flex gap-2 overflow-x-auto custom-scrollbar pb-2">
+                      {[
+                        { id: 'basic' as const, label: 'Basis', icon: '📋' },
+                        { id: 'general' as const, label: 'Allgemein', icon: '📝' },
+                        { id: 'financial' as const, label: 'Finanzen', icon: '💰' },
+                        ...(formData.type === AssetType.VEHICLE ? [{ id: 'vehicle' as const, label: 'Fahrzeug', icon: '🚗' }] : []),
+                        ...(formData.type === AssetType.MACHINE ? [{ id: 'machine' as const, label: 'Maschine', icon: '⚙️' }] : []),
+                        ...(formData.type === AssetType.TOOL ? [{ id: 'tool' as const, label: 'Werkzeug', icon: '🔧' }] : []),
+                      ].map(tab => (
+                        <button
+                          key={tab.id}
+                          type="button"
+                          onClick={() => setInfoSubTab(tab.id)}
+                          className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase italic tracking-tighter whitespace-nowrap transition-all ${
+                            infoSubTab === tab.id
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+                          }`}
+                        >
+                          <span className="mr-1">{tab.icon}</span>
+                          {tab.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Basis-Info */}
+                  {(infoSubTab === 'basic' || editMode) && (
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase mb-1">Marke</label>
+                          {editMode ? <input type="text" name="brand" value={formData.brand} onChange={handleChange} className="w-full p-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold outline-none dark:text-white" /> : <p className="text-xs font-black text-slate-700 dark:text-slate-300">{formData.brand}</p>}
+                        </div>
+                        <div>
+                          <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase mb-1">Modell</label>
+                          {editMode ? <input type="text" name="model" value={formData.model} onChange={handleChange} className="w-full p-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold outline-none dark:text-white" /> : <p className="text-xs font-black text-slate-700 dark:text-slate-300">{formData.model}</p>}
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase mb-1">Kategorie</label>
+                          {editMode ? (
+                            <select name="type" value={formData.type} onChange={handleChange} className="w-full p-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold outline-none dark:text-white">
+                              {Object.values(AssetType).map(t => <option key={t} value={t}>{AssetTypeLabels[t]}</option>)}
+                            </select>
+                          ) : (
+                            <p className="text-xs font-black text-slate-700 dark:text-slate-300">{AssetTypeLabels[formData.type]}</p>
+                          )}
+                        </div>
+                        <div>
+                          <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase mb-1">Zustand</label>
+                          {editMode ? (
+                            <input type="number" min="1" max="5" name="condition" value={formData.condition} onChange={handleChange} className="w-full p-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold outline-none dark:text-white" />
+                          ) : (
+                            <p className="text-xs font-black text-slate-700 dark:text-slate-300">{formData.condition}/5</p>
+                          )}
+                        </div>
+                      </div>
+                      {formData.type === AssetType.VEHICLE && (
+                        <div>
+                          <label className="block text-[9px] font-black text-slate-400 uppercase mb-1">Kennzeichen</label>
+                          {editMode ? (
+                            <input type="text" name="licensePlate" value={formData.licensePlate || ''} onChange={handleChange} className="w-full p-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 rounded-xl text-xs font-bold outline-none dark:text-white uppercase" />
+                          ) : (
+                            <p className="text-xs font-black text-slate-700 dark:text-slate-300">{formData.licensePlate || '—'}</p>
+                          )}
+                        </div>
+                      )}
+                      {(formData.type === AssetType.MACHINE || formData.type === AssetType.TOOL) && formData.serialNumber && (
+                        <div>
+                          <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase mb-1">Seriennummer</label>
+                          {editMode ? (
+                            <input type="text" name="serialNumber" value={formData.serialNumber || ''} onChange={handleChange} className="w-full p-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold outline-none dark:text-white" />
+                          ) : (
+                            <p className="text-xs font-black text-slate-700 dark:text-slate-300">{formData.serialNumber}</p>
+                          )}
+                        </div>
+                      )}
+                      {formData.type === AssetType.VEHICLE && formData.vin && (
+                        <div>
+                          <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase mb-1">Fahrgestellnummer (VIN)</label>
+                          {editMode ? (
+                            <input type="text" name="vin" value={formData.vin || ''} onChange={handleChange} className="w-full p-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold outline-none dark:text-white uppercase" />
+                          ) : (
+                            <p className="text-xs font-black text-slate-700 dark:text-slate-300 font-mono">{formData.vin}</p>
+                          )}
+                        </div>
+                      )}
+                      {formData.type === AssetType.VEHICLE && formData.mileage !== undefined && (
+                        <div>
+                          <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase mb-1">Kilometerstand</label>
+                          {editMode ? (
+                            <input type="number" name="mileage" value={formData.mileage || ''} onChange={handleChange} className="w-full p-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold outline-none dark:text-white" />
+                          ) : (
+                            <p className="text-xs font-black text-slate-700 dark:text-slate-300">{formData.mileage?.toLocaleString('de-DE') || '—'} km</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Allgemeine Info */}
+                  {!editMode && infoSubTab === 'general' && (
+                    <div className="space-y-4">
+                      {formData.description && (
+                        <div>
+                          <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase mb-1">Beschreibung</label>
+                          <p className="text-xs text-slate-700 dark:text-slate-300 whitespace-pre-wrap">{formData.description}</p>
+                        </div>
+                      )}
+                      {formData.location && (
+                        <div>
+                          <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase mb-1">Standort</label>
+                          <p className="text-xs font-black text-slate-700 dark:text-slate-300">{formData.location}</p>
+                        </div>
+                      )}
+                      {formData.department && (
+                        <div>
+                          <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase mb-1">Abteilung</label>
+                          <p className="text-xs font-black text-slate-700 dark:text-slate-300">{formData.department}</p>
+                        </div>
+                      )}
+                      {formData.costCenter && (
+                        <div>
+                          <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase mb-1">Kostenstelle</label>
+                          <p className="text-xs font-black text-slate-700 dark:text-slate-300">{formData.costCenter}</p>
+                        </div>
+                      )}
+                      {formData.supplier && (
+                        <div>
+                          <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase mb-1">Lieferant</label>
+                          <p className="text-xs font-black text-slate-700 dark:text-slate-300">{formData.supplier}</p>
+                        </div>
+                      )}
+                      {formData.tags && formData.tags.length > 0 && (
+                        <div>
+                          <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase mb-1">Tags</label>
+                          <div className="flex flex-wrap gap-2">
+                            {formData.tags.map((tag, idx) => (
+                              <span key={idx} className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-lg text-[10px] font-bold">{tag}</span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {(formData.hasInvoice || formData.hasWarrantyCertificate || formData.hasManual) && (
+                        <div>
+                          <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase mb-2">Dokumente vorhanden</label>
+                          <div className="flex flex-wrap gap-3">
+                            {formData.hasInvoice && <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">✓ Rechnung</span>}
+                            {formData.hasWarrantyCertificate && <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">✓ Garantieschein</span>}
+                            {formData.hasManual && <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">✓ Bedienungsanleitung</span>}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Finanzen */}
+                  {!editMode && infoSubTab === 'financial' && (
+                    <div className="space-y-3">
+                      {formData.purchasePrice !== undefined && (
+                        <div>
+                          <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase mb-1">Anschaffungspreis</label>
+                          <p className="text-xs font-black text-slate-700 dark:text-slate-300">{formData.purchasePrice.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}</p>
+                        </div>
+                      )}
+                      {formData.residualValue !== undefined && (
+                        <div>
+                          <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase mb-1">Restwert</label>
+                          <p className="text-xs font-black text-slate-700 dark:text-slate-300">{formData.residualValue.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}</p>
+                        </div>
+                      )}
+                      {formData.purchaseDate && (
+                        <div>
+                          <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase mb-1">Anschaffungsdatum</label>
+                          <p className="text-xs font-black text-slate-700 dark:text-slate-300">{new Date(formData.purchaseDate).toLocaleDateString('de-DE')}</p>
+                        </div>
+                      )}
+                      {formData.invoiceNumber && (
+                        <div>
+                          <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase mb-1">Rechnungsnummer</label>
+                          <p className="text-xs font-black text-slate-700 dark:text-slate-300">{formData.invoiceNumber}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Fahrzeug-spezifisch */}
+                  {!editMode && infoSubTab === 'vehicle' && formData.type === AssetType.VEHICLE && (
+                    <div className="space-y-4">
+                      {formData.vin && (
+                        <div>
+                          <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase mb-1">Fahrgestellnummer (VIN)</label>
+                          <p className="text-xs font-black text-slate-700 dark:text-slate-300 font-mono">{formData.vin}</p>
+                        </div>
+                      )}
+                      {formData.vehicleClass && (
+                        <div>
+                          <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase mb-1">Fahrzeugklasse</label>
+                          <p className="text-xs font-black text-slate-700 dark:text-slate-300">{formData.vehicleClass}</p>
+                        </div>
+                      )}
+                      {(formData.engineDisplacement || formData.power || formData.fuelType || formData.transmission) && (
+                        <div className="p-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800">
+                          <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase mb-2">Technische Daten</label>
+                          <div className="grid grid-cols-2 gap-2 text-xs">
+                            {formData.engineDisplacement && <div><span className="text-slate-500">Hubraum:</span> <span className="font-bold">{formData.engineDisplacement}</span></div>}
+                            {formData.power && <div><span className="text-slate-500">Leistung:</span> <span className="font-bold">{formData.power}</span></div>}
+                            {formData.fuelType && <div><span className="text-slate-500">Kraftstoff:</span> <span className="font-bold">{formData.fuelType}</span></div>}
+                            {formData.transmission && <div><span className="text-slate-500">Getriebe:</span> <span className="font-bold">{formData.transmission}</span></div>}
+                          </div>
+                        </div>
+                      )}
+                      {(formData.insuranceCompany || formData.insuranceNumber || formData.insuranceUntil) && (
+                        <div className="p-3 bg-emerald-50/50 dark:bg-emerald-900/10 rounded-xl border border-emerald-100 dark:border-emerald-900/30">
+                          <label className="block text-[9px] font-black text-emerald-600 dark:text-emerald-400 uppercase mb-2">Versicherung</label>
+                          <div className="space-y-1 text-xs">
+                            {formData.insuranceCompany && <div><span className="text-slate-500">Gesellschaft:</span> <span className="font-bold">{formData.insuranceCompany}</span></div>}
+                            {formData.insuranceNumber && <div><span className="text-slate-500">Nummer:</span> <span className="font-bold">{formData.insuranceNumber}</span></div>}
+                            {formData.insuranceUntil && <div><span className="text-slate-500">Gültig bis:</span> <span className="font-bold">{new Date(formData.insuranceUntil).toLocaleDateString('de-DE')}</span></div>}
+                          </div>
+                        </div>
+                      )}
+                      {(formData.hasVehicleRegistration || formData.hasVehicleTitle || formData.hasServiceBook) && (
+                        <div>
+                          <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase mb-2">Dokumente</label>
+                          <div className="flex flex-wrap gap-3">
+                            {formData.hasVehicleRegistration && <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">✓ Fahrzeugschein</span>}
+                            {formData.hasVehicleTitle && <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">✓ Fahrzeugbrief</span>}
+                            {formData.hasServiceBook && <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">✓ Serviceheft</span>}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Maschine-spezifisch */}
+                  {!editMode && infoSubTab === 'machine' && formData.type === AssetType.MACHINE && (
+                    <div className="space-y-4">
+                      {formData.serialNumber && (
+                        <div>
+                          <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase mb-1">Seriennummer</label>
+                          <p className="text-xs font-black text-slate-700 dark:text-slate-300">{formData.serialNumber}</p>
+                        </div>
+                      )}
+                      {(formData.machinePower || formData.weight || formData.voltage) && (
+                        <div className="p-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800">
+                          <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase mb-2">Technische Daten</label>
+                          <div className="grid grid-cols-2 gap-2 text-xs">
+                            {formData.machinePower && <div><span className="text-slate-500">Leistung:</span> <span className="font-bold">{formData.machinePower}</span></div>}
+                            {formData.weight && <div><span className="text-slate-500">Gewicht:</span> <span className="font-bold">{formData.weight}</span></div>}
+                            {formData.voltage && <div><span className="text-slate-500">Spannung:</span> <span className="font-bold">{formData.voltage}</span></div>}
+                            {formData.dimensions && <div><span className="text-slate-500">Abmessungen:</span> <span className="font-bold">{formData.dimensions}</span></div>}
+                          </div>
+                        </div>
+                      )}
+                      {(formData.lastUvvInspection || formData.nextUvvInspection) && (
+                        <div className="p-3 bg-emerald-50/50 dark:bg-emerald-900/10 rounded-xl border border-emerald-100 dark:border-emerald-900/30">
+                          <label className="block text-[9px] font-black text-emerald-600 dark:text-emerald-400 uppercase mb-2">UVV-Prüfung</label>
+                          <div className="space-y-1 text-xs">
+                            {formData.lastUvvInspection && <div><span className="text-slate-500">Letzte:</span> <span className="font-bold">{new Date(formData.lastUvvInspection).toLocaleDateString('de-DE')}</span></div>}
+                            {formData.nextUvvInspection && <div><span className="text-slate-500">Nächste:</span> <span className="font-bold">{new Date(formData.nextUvvInspection).toLocaleDateString('de-DE')}</span></div>}
+                          </div>
+                        </div>
+                      )}
+                      {(formData.hasCeMarking || formData.hasGsMarking || formData.hasInspectionReport) && (
+                        <div>
+                          <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase mb-2">Zertifikate</label>
+                          <div className="flex flex-wrap gap-3">
+                            {formData.hasCeMarking && <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">✓ CE-Kennzeichnung</span>}
+                            {formData.hasGsMarking && <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">✓ GS-Zeichen</span>}
+                            {formData.hasInspectionReport && <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">✓ Prüfbericht</span>}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Werkzeug-spezifisch */}
+                  {!editMode && infoSubTab === 'tool' && formData.type === AssetType.TOOL && (
+                    <div className="space-y-4">
+                      {formData.serialNumber && (
+                        <div>
+                          <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase mb-1">Seriennummer</label>
+                          <p className="text-xs font-black text-slate-700 dark:text-slate-300">{formData.serialNumber}</p>
+                        </div>
+                      )}
+                      {(formData.size || formData.material || formData.toolBoxSet) && (
+                        <div className="p-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800">
+                          <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase mb-2">Details</label>
+                          <div className="space-y-1 text-xs">
+                            {formData.size && <div><span className="text-slate-500">Größe:</span> <span className="font-bold">{formData.size}</span></div>}
+                            {formData.material && <div><span className="text-slate-500">Material:</span> <span className="font-bold">{formData.material}</span></div>}
+                            {formData.toolBoxSet && <div><span className="text-slate-500">Werkzeugkasten/Set:</span> <span className="font-bold">{formData.toolBoxSet}</span></div>}
+                          </div>
+                        </div>
+                      )}
+                      {(formData.lastCalibration || formData.nextCalibration) && (
+                        <div className="p-3 bg-emerald-50/50 dark:bg-emerald-900/10 rounded-xl border border-emerald-100 dark:border-emerald-900/30">
+                          <label className="block text-[9px] font-black text-emerald-600 dark:text-emerald-400 uppercase mb-2">Kalibrierung</label>
+                          <div className="space-y-1 text-xs">
+                            {formData.lastCalibration && <div><span className="text-slate-500">Letzte:</span> <span className="font-bold">{new Date(formData.lastCalibration).toLocaleDateString('de-DE')}</span></div>}
+                            {formData.nextCalibration && <div><span className="text-slate-500">Nächste:</span> <span className="font-bold">{new Date(formData.nextCalibration).toLocaleDateString('de-DE')}</span></div>}
+                          </div>
+                        </div>
+                      )}
+                      {(formData.hasCeMarking || formData.hasGsMarking || formData.requiresCalibration) && (
+                        <div>
+                          <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase mb-2">Zertifikate</label>
+                          <div className="flex flex-wrap gap-3">
+                            {formData.hasCeMarking && <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">✓ CE-Kennzeichnung</span>}
+                            {formData.hasGsMarking && <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">✓ GS-Zeichen</span>}
+                            {formData.requiresCalibration && <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">✓ Kalibrierung erforderlich</span>}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Edit Mode: Alle Felder bearbeitbar */}
+                  {editMode && (
+                    <div className="space-y-4 max-h-[60vh] overflow-y-auto custom-scrollbar">
+                      {/* Allgemeine Felder */}
+                      <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800">
+                        <h4 className="text-xs font-black text-slate-700 dark:text-slate-300 uppercase italic tracking-tighter mb-3">Allgemein</h4>
+                        <div className="space-y-3">
+                          <div>
+                            <label className="block text-[9px] font-black text-slate-400 uppercase mb-1">Beschreibung</label>
+                            <textarea name="description" value={formData.description || ''} onChange={handleChange} rows={3} className="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium outline-none dark:text-white" />
+                          </div>
+                          <div>
+                            <label className="block text-[9px] font-black text-slate-400 uppercase mb-1">Notizen</label>
+                            <textarea name="notes" value={formData.notes || ''} onChange={handleChange} rows={2} className="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium outline-none dark:text-white" />
+                          </div>
+                          <div>
+                            <label className="block text-[9px] font-black text-slate-400 uppercase mb-1">Tags (komma-separiert)</label>
+                            <input type="text" name="tags" value={formData.tags?.join(', ') || ''} onChange={handleChange} className="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold outline-none dark:text-white" />
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-[9px] font-black text-slate-400 uppercase mb-1">Standort</label>
+                              <input type="text" name="location" value={formData.location || ''} onChange={handleChange} className="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold outline-none dark:text-white" />
+                            </div>
+                            <div>
+                              <label className="block text-[9px] font-black text-slate-400 uppercase mb-1">Abteilung</label>
+                              <input type="text" name="department" value={formData.department || ''} onChange={handleChange} className="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold outline-none dark:text-white" />
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-[9px] font-black text-slate-400 uppercase mb-1">Kostenstelle</label>
+                            <input type="text" name="costCenter" value={formData.costCenter || ''} onChange={handleChange} className="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold outline-none dark:text-white" />
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-[9px] font-black text-slate-400 uppercase mb-1">Lieferant</label>
+                              <input type="text" name="supplier" value={formData.supplier || ''} onChange={handleChange} className="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold outline-none dark:text-white" />
+                            </div>
+                            <div>
+                              <label className="block text-[9px] font-black text-slate-400 uppercase mb-1">Rechnungsnummer</label>
+                              <input type="text" name="invoiceNumber" value={formData.invoiceNumber || ''} onChange={handleChange} className="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold outline-none dark:text-white" />
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-[9px] font-black text-slate-400 uppercase mb-2">Dokumente vorhanden</label>
+                            <div className="grid grid-cols-3 gap-3">
+                              <label className="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" name="hasInvoice" checked={formData.hasInvoice || false} onChange={handleChange} className="w-4 h-4 rounded border-slate-300" />
+                                <span className="text-xs font-bold">Rechnung</span>
+                              </label>
+                              <label className="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" name="hasWarrantyCertificate" checked={formData.hasWarrantyCertificate || false} onChange={handleChange} className="w-4 h-4 rounded border-slate-300" />
+                                <span className="text-xs font-bold">Garantieschein</span>
+                              </label>
+                              <label className="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" name="hasManual" checked={formData.hasManual || false} onChange={handleChange} className="w-4 h-4 rounded border-slate-300" />
+                                <span className="text-xs font-bold">Bedienungsanleitung</span>
+                              </label>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Finanzen */}
+                      <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800">
+                        <h4 className="text-xs font-black text-slate-700 dark:text-slate-300 uppercase italic tracking-tighter mb-3">Finanzen</h4>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-[9px] font-black text-slate-400 uppercase mb-1">Anschaffungspreis (€)</label>
+                            <input type="number" step="0.01" name="purchasePrice" value={formData.purchasePrice || ''} onChange={handleChange} className="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold outline-none dark:text-white" />
+                          </div>
+                          <div>
+                            <label className="block text-[9px] font-black text-slate-400 uppercase mb-1">Restwert (€)</label>
+                            <input type="number" step="0.01" name="residualValue" value={formData.residualValue || ''} onChange={handleChange} className="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold outline-none dark:text-white" />
+                          </div>
+                          <div>
+                            <label className="block text-[9px] font-black text-slate-400 uppercase mb-1">Anschaffungsdatum</label>
+                            <input type="date" name="purchaseDate" value={formData.purchaseDate || ''} onChange={handleChange} className="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold outline-none dark:text-white" />
+                          </div>
+                          <div>
+                            <label className="block text-[9px] font-black text-slate-400 uppercase mb-1">Abschreibungsdauer (Jahre)</label>
+                            <input type="number" name="depreciationYears" value={formData.depreciationYears || ''} onChange={handleChange} className="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold outline-none dark:text-white" />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Fahrzeug-spezifisch */}
+                      {formData.type === AssetType.VEHICLE && (
+                        <div className="p-4 bg-blue-50/50 dark:bg-blue-900/10 rounded-xl border border-blue-100 dark:border-blue-900/30">
+                          <h4 className="text-xs font-black text-blue-600 dark:text-blue-400 uppercase italic tracking-tighter mb-3">Fahrzeug</h4>
+                          <div className="space-y-3">
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-[9px] font-black text-slate-400 uppercase mb-1">Fahrgestellnummer (VIN)</label>
+                                <input type="text" name="vin" value={formData.vin || ''} onChange={handleChange} className="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold outline-none dark:text-white uppercase" />
+                              </div>
+                              <div>
+                                <label className="block text-[9px] font-black text-slate-400 uppercase mb-1">Fahrzeugklasse</label>
+                                <select name="vehicleClass" value={formData.vehicleClass || ''} onChange={handleChange} className="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold outline-none dark:text-white">
+                                  <option value="">—</option>
+                                  <option value="Pkw">Pkw</option>
+                                  <option value="Lkw">Lkw</option>
+                                  <option value="Transporter">Transporter</option>
+                                  <option value="Motorrad">Motorrad</option>
+                                  <option value="Anhänger">Anhänger</option>
+                                </select>
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-[9px] font-black text-slate-400 uppercase mb-1">Hubraum</label>
+                                <input type="text" name="engineDisplacement" value={formData.engineDisplacement || ''} onChange={handleChange} className="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold outline-none dark:text-white" placeholder="z.B. 2000 ccm" />
+                              </div>
+                              <div>
+                                <label className="block text-[9px] font-black text-slate-400 uppercase mb-1">Leistung</label>
+                                <input type="text" name="power" value={formData.power || ''} onChange={handleChange} className="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold outline-none dark:text-white" placeholder="z.B. 150 PS" />
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-[9px] font-black text-slate-400 uppercase mb-1">Kraftstoff</label>
+                                <select name="fuelType" value={formData.fuelType || ''} onChange={handleChange} className="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold outline-none dark:text-white">
+                                  <option value="">—</option>
+                                  <option value="Benzin">Benzin</option>
+                                  <option value="Diesel">Diesel</option>
+                                  <option value="Elektro">Elektro</option>
+                                  <option value="Hybrid">Hybrid</option>
+                                  <option value="LPG">LPG</option>
+                                  <option value="CNG">CNG</option>
+                                </select>
+                              </div>
+                              <div>
+                                <label className="block text-[9px] font-black text-slate-400 uppercase mb-1">Getriebe</label>
+                                <select name="transmission" value={formData.transmission || ''} onChange={handleChange} className="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold outline-none dark:text-white">
+                                  <option value="">—</option>
+                                  <option value="Manuell">Manuell</option>
+                                  <option value="Automatik">Automatik</option>
+                                </select>
+                              </div>
+                            </div>
+                            <div>
+                              <label className="block text-[9px] font-black text-slate-400 uppercase mb-1">Kilometerstand</label>
+                              <input type="number" name="mileage" value={formData.mileage || ''} onChange={handleChange} className="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold outline-none dark:text-white" />
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-[9px] font-black text-slate-400 uppercase mb-1">Versicherungsgesellschaft</label>
+                                <input type="text" name="insuranceCompany" value={formData.insuranceCompany || ''} onChange={handleChange} className="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold outline-none dark:text-white" />
+                              </div>
+                              <div>
+                                <label className="block text-[9px] font-black text-slate-400 uppercase mb-1">Versicherungsnummer</label>
+                                <input type="text" name="insuranceNumber" value={formData.insuranceNumber || ''} onChange={handleChange} className="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold outline-none dark:text-white" />
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-[9px] font-black text-slate-400 uppercase mb-1">Versicherung bis</label>
+                                <input type="date" name="insuranceUntil" value={formData.insuranceUntil || ''} onChange={handleChange} className="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold outline-none dark:text-white" />
+                              </div>
+                              <div>
+                                <label className="block text-[9px] font-black text-slate-400 uppercase mb-1">KFZ-Steuer (€/Monat)</label>
+                                <input type="number" step="0.01" name="vehicleTaxMonthly" value={formData.vehicleTaxMonthly || ''} onChange={handleChange} className="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold outline-none dark:text-white" />
+                              </div>
+                            </div>
+                            <div>
+                              <label className="block text-[9px] font-black text-slate-400 uppercase mb-2">Dokumente</label>
+                              <div className="grid grid-cols-3 gap-3">
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                  <input type="checkbox" name="hasVehicleRegistration" checked={formData.hasVehicleRegistration || false} onChange={handleChange} className="w-4 h-4 rounded border-slate-300" />
+                                  <span className="text-xs font-bold">Fahrzeugschein</span>
+                                </label>
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                  <input type="checkbox" name="hasVehicleTitle" checked={formData.hasVehicleTitle || false} onChange={handleChange} className="w-4 h-4 rounded border-slate-300" />
+                                  <span className="text-xs font-bold">Fahrzeugbrief</span>
+                                </label>
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                  <input type="checkbox" name="hasServiceBook" checked={formData.hasServiceBook || false} onChange={handleChange} className="w-4 h-4 rounded border-slate-300" />
+                                  <span className="text-xs font-bold">Serviceheft</span>
+                                </label>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Maschine-spezifisch */}
+                      {formData.type === AssetType.MACHINE && (
+                        <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800">
+                          <h4 className="text-xs font-black text-slate-700 dark:text-slate-300 uppercase italic tracking-tighter mb-3">Maschine</h4>
+                          <div className="space-y-3">
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-[9px] font-black text-slate-400 uppercase mb-1">Seriennummer</label>
+                                <input type="text" name="serialNumber" value={formData.serialNumber || ''} onChange={handleChange} className="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold outline-none dark:text-white" />
+                              </div>
+                              <div>
+                                <label className="block text-[9px] font-black text-slate-400 uppercase mb-1">Hersteller-Nr.</label>
+                                <input type="text" name="manufacturerNumber" value={formData.manufacturerNumber || ''} onChange={handleChange} className="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold outline-none dark:text-white" />
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-[9px] font-black text-slate-400 uppercase mb-1">Leistung</label>
+                                <input type="text" name="machinePower" value={formData.machinePower || ''} onChange={handleChange} className="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold outline-none dark:text-white" placeholder="z.B. 5 kW" />
+                              </div>
+                              <div>
+                                <label className="block text-[9px] font-black text-slate-400 uppercase mb-1">Gewicht</label>
+                                <input type="text" name="weight" value={formData.weight || ''} onChange={handleChange} className="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold outline-none dark:text-white" placeholder="z.B. 250 kg" />
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-[9px] font-black text-slate-400 uppercase mb-1">Spannung</label>
+                                <input type="text" name="voltage" value={formData.voltage || ''} onChange={handleChange} className="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold outline-none dark:text-white" placeholder="z.B. 230V" />
+                              </div>
+                              <div>
+                                <label className="block text-[9px] font-black text-slate-400 uppercase mb-1">Abmessungen</label>
+                                <input type="text" name="dimensions" value={formData.dimensions || ''} onChange={handleChange} className="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold outline-none dark:text-white" placeholder="L x B x H" />
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-[9px] font-black text-slate-400 uppercase mb-1">Letzte UVV-Prüfung</label>
+                                <input type="date" name="lastUvvInspection" value={formData.lastUvvInspection || ''} onChange={handleChange} className="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold outline-none dark:text-white" />
+                              </div>
+                              <div>
+                                <label className="block text-[9px] font-black text-slate-400 uppercase mb-1">Nächste UVV-Prüfung</label>
+                                <input type="date" name="nextUvvInspection" value={formData.nextUvvInspection || ''} onChange={handleChange} className="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold outline-none dark:text-white" />
+                              </div>
+                            </div>
+                            <div>
+                              <label className="block text-[9px] font-black text-slate-400 uppercase mb-2">Zertifikate</label>
+                              <div className="grid grid-cols-3 gap-3">
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                  <input type="checkbox" name="hasCeMarking" checked={formData.hasCeMarking || false} onChange={handleChange} className="w-4 h-4 rounded border-slate-300" />
+                                  <span className="text-xs font-bold">CE-Kennzeichnung</span>
+                                </label>
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                  <input type="checkbox" name="hasGsMarking" checked={formData.hasGsMarking || false} onChange={handleChange} className="w-4 h-4 rounded border-slate-300" />
+                                  <span className="text-xs font-bold">GS-Zeichen</span>
+                                </label>
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                  <input type="checkbox" name="hasInspectionReport" checked={formData.hasInspectionReport || false} onChange={handleChange} className="w-4 h-4 rounded border-slate-300" />
+                                  <span className="text-xs font-bold">Prüfbericht</span>
+                                </label>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Werkzeug-spezifisch */}
+                      {formData.type === AssetType.TOOL && (
+                        <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800">
+                          <h4 className="text-xs font-black text-slate-700 dark:text-slate-300 uppercase italic tracking-tighter mb-3">Werkzeug</h4>
+                          <div className="space-y-3">
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-[9px] font-black text-slate-400 uppercase mb-1">Seriennummer</label>
+                                <input type="text" name="serialNumber" value={formData.serialNumber || ''} onChange={handleChange} className="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold outline-none dark:text-white" />
+                              </div>
+                              <div>
+                                <label className="block text-[9px] font-black text-slate-400 uppercase mb-1">Artikelnummer</label>
+                                <input type="text" name="articleNumber" value={formData.articleNumber || ''} onChange={handleChange} className="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold outline-none dark:text-white" />
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-[9px] font-black text-slate-400 uppercase mb-1">Größe</label>
+                                <input type="text" name="size" value={formData.size || ''} onChange={handleChange} className="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold outline-none dark:text-white" placeholder="z.B. 10mm" />
+                              </div>
+                              <div>
+                                <label className="block text-[9px] font-black text-slate-400 uppercase mb-1">Material</label>
+                                <input type="text" name="material" value={formData.material || ''} onChange={handleChange} className="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold outline-none dark:text-white" />
+                              </div>
+                            </div>
+                            <div>
+                              <label className="block text-[9px] font-black text-slate-400 uppercase mb-1">Werkzeugkasten/Set</label>
+                              <input type="text" name="toolBoxSet" value={formData.toolBoxSet || ''} onChange={handleChange} className="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold outline-none dark:text-white" />
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-[9px] font-black text-slate-400 uppercase mb-1">Letzte Kalibrierung</label>
+                                <input type="date" name="lastCalibration" value={formData.lastCalibration || ''} onChange={handleChange} className="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold outline-none dark:text-white" />
+                              </div>
+                              <div>
+                                <label className="block text-[9px] font-black text-slate-400 uppercase mb-1">Nächste Kalibrierung</label>
+                                <input type="date" name="nextCalibration" value={formData.nextCalibration || ''} onChange={handleChange} className="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold outline-none dark:text-white" />
+                              </div>
+                            </div>
+                            <div>
+                              <label className="block text-[9px] font-black text-slate-400 uppercase mb-2">Zertifikate</label>
+                              <div className="grid grid-cols-3 gap-3">
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                  <input type="checkbox" name="hasCeMarking" checked={formData.hasCeMarking || false} onChange={handleChange} className="w-4 h-4 rounded border-slate-300" />
+                                  <span className="text-xs font-bold">CE-Kennzeichnung</span>
+                                </label>
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                  <input type="checkbox" name="hasGsMarking" checked={formData.hasGsMarking || false} onChange={handleChange} className="w-4 h-4 rounded border-slate-300" />
+                                  <span className="text-xs font-bold">GS-Zeichen</span>
+                                </label>
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                  <input type="checkbox" name="requiresCalibration" checked={formData.requiresCalibration || false} onChange={handleChange} className="w-4 h-4 rounded border-slate-300" />
+                                  <span className="text-xs font-bold">Kalibrierung erforderlich</span>
+                                </label>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="flex gap-2 pt-4 border-t border-slate-200 dark:border-slate-800">
+                        <button type="button" onClick={() => { setEditMode(false); setFormData({...asset}); setSelectedFile(null); }} disabled={isUploadingImage} className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-black rounded-xl uppercase text-[10px] tracking-tighter italic disabled:opacity-50">Abbrechen</button>
+                        <button type="submit" disabled={isUploadingImage} className="flex-1 py-3 bg-blue-600 text-white font-black rounded-xl uppercase text-[10px] tracking-tighter italic shadow-lg shadow-blue-600/20 disabled:opacity-50 flex items-center justify-center gap-2">
+                          {isUploadingImage ? (
+                            <>
+                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                              Upload...
+                            </>
+                          ) : (
+                            'Sichern'
+                          )}
+                        </button>
+                      </div>
+                      {selectedFile && (
+                        <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-900">
+                          <p className="text-xs font-bold text-blue-700 dark:text-blue-300">
+                            📷 Neues Bild ausgewählt: {selectedFile.name}
+                          </p>
+                          <p className="text-[10px] text-blue-600 dark:text-blue-400 mt-1">
+                            Das Bild wird beim Speichern hochgeladen
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </form>
               </div>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="flex justify-between items-center mb-2">
-                  <h3 className="text-sm font-black text-slate-800 dark:text-slate-200 uppercase italic tracking-tighter">Details</h3>
-                  {isAdmin && !editMode && (
-                    <div className="flex gap-4">
-                      <button type="button" onClick={() => setIsConfirmingDelete(true)} className="text-[10px] font-black text-rose-500 uppercase italic tracking-widest hover:underline">Löschen</button>
-                      <button type="button" onClick={() => setEditMode(true)} className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase italic tracking-widest hover:underline">Ändern</button>
-                    </div>
-                  )}
-                </div>
-                <div className="space-y-3">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase mb-1">Marke</label>
-                      {editMode ? <input type="text" name="brand" value={formData.brand} onChange={handleChange} className="w-full p-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold outline-none dark:text-white" /> : <p className="text-xs font-black text-slate-700 dark:text-slate-300">{formData.brand}</p>}
-                    </div>
-                    <div>
-                      <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase mb-1">Modell</label>
-                      {editMode ? <input type="text" name="model" value={formData.model} onChange={handleChange} className="w-full p-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold outline-none dark:text-white" /> : <p className="text-xs font-black text-slate-700 dark:text-slate-300">{formData.model}</p>}
-                    </div>
-                  </div>
-                  {editMode && formData.type === AssetType.VEHICLE && (
-                    <div>
-                      <label className="block text-[9px] font-black text-slate-400 uppercase mb-1">Kennzeichen</label>
-                      <input type="text" name="licensePlate" value={formData.licensePlate || ''} onChange={handleChange} className="w-full p-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 rounded-xl text-xs font-bold outline-none dark:text-white" />
-                    </div>
-                  )}
-                  {editMode && (
-                    <div className="flex gap-2 pt-4">
-                      <button type="button" onClick={() => { setEditMode(false); setFormData({...asset}); setSelectedFile(null); }} disabled={isUploadingImage} className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-black rounded-xl uppercase text-[10px] tracking-tighter italic disabled:opacity-50">Abbrechen</button>
-                      <button type="submit" disabled={isUploadingImage} className="flex-1 py-3 bg-blue-600 text-white font-black rounded-xl uppercase text-[10px] tracking-tighter italic shadow-lg shadow-blue-600/20 disabled:opacity-50 flex items-center justify-center gap-2">
-                        {isUploadingImage ? (
-                          <>
-                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                            Upload...
-                          </>
-                        ) : (
-                          'Sichern'
-                        )}
-                      </button>
-                    </div>
-                  )}
-                  {editMode && selectedFile && (
-                    <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-900">
-                      <p className="text-xs font-bold text-blue-700 dark:text-blue-300">
-                        📷 Neues Bild ausgewählt: {selectedFile.name}
-                      </p>
-                      <p className="text-[10px] text-blue-600 dark:text-blue-400 mt-1">
-                        Das Bild wird beim Speichern hochgeladen
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </form>
             </div>
           )}
 
