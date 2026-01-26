@@ -300,18 +300,33 @@ export async function signIn(emailOrUsername: string, password: string): Promise
     let email = emailOrUsername.trim();
     
     // Wenn die Eingabe kein @ enthält, ist es wahrscheinlich ein Benutzername
-    // Versuche, die E-Mail zu finden, indem wir nach Benutzernamen suchen
+    // Versuche, die E-Mail-Adresse über SQL-Funktion zu finden
     if (!email.includes('@')) {
       console.log('🔵 signIn: Eingabe ist kein @, suche nach Benutzername...');
       
-      // Versuche, User in auth.users zu finden, deren E-Mail mit dem Benutzernamen beginnt
-      // Da wir nicht direkt in auth.users suchen können, versuchen wir es mit verschiedenen Domains
-      // Oder: Versuche es direkt als E-Mail (Supabase wird es validieren)
-      // Für jetzt: Behandle es als mögliche E-Mail und lasse Supabase es validieren
-      // Wenn es fehlschlägt, geben wir eine bessere Fehlermeldung zurück
+      try {
+        // Rufe SQL-Funktion auf, um E-Mail-Adresse zu finden
+        const { data: foundEmail, error: rpcError } = await supabase.rpc('find_email_by_username', {
+          username_input: email
+        });
+        
+        if (rpcError) {
+          console.error('❌ signIn: Fehler beim Suchen nach E-Mail:', rpcError);
+          // Fallback: Versuche es trotzdem mit der Eingabe
+        } else if (foundEmail) {
+          console.log('✅ signIn: E-Mail gefunden für Benutzername:', foundEmail);
+          email = foundEmail;
+        } else {
+          console.log('⚠️ signIn: Keine E-Mail für Benutzername gefunden, versuche direkten Login...');
+          // Keine E-Mail gefunden, versuche es trotzdem (könnte eine ungewöhnliche E-Mail sein)
+        }
+      } catch (rpcException: any) {
+        console.error('❌ signIn: Exception beim Suchen nach E-Mail:', rpcException);
+        // Fallback: Versuche es trotzdem mit der Eingabe
+      }
     }
     
-    // Versuche Login mit der Eingabe (als E-Mail)
+    // Versuche Login mit der E-Mail-Adresse
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
