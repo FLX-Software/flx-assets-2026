@@ -382,6 +382,14 @@ export function dbAssetToAsset(dbAsset: DBAsset, repairHistory: RepairEntry[] = 
   };
 }
 
+// Helper: Konvertiert leere Strings oder undefined zu null für Date-Felder
+function normalizeDateField(value: string | undefined | null): string | null {
+  if (!value || value.trim() === '' || value === '') {
+    return null;
+  }
+  return value;
+}
+
 // Helper: Frontend-Asset → DB-Asset konvertieren
 export function assetToDBAsset(asset: Asset, organizationId: string): Partial<DBAsset> {
   return {
@@ -390,17 +398,17 @@ export function assetToDBAsset(asset: Asset, organizationId: string): Partial<DB
     model: asset.model,
     type: asset.type,
     purchase_year: asset.purchaseYear,
-    warranty_until: asset.warrantyUntil,
+    warranty_until: normalizeDateField(asset.warrantyUntil),
     condition: asset.condition,
     image_url: asset.imageUrl,
     qr_string: asset.qrCode,
     status: asset.status,
     current_user_id: asset.currentUserId,
-    last_maintenance: asset.lastMaintenance || null,
-    next_maintenance: asset.nextMaintenance || null,
+    last_maintenance: normalizeDateField(asset.lastMaintenance),
+    next_maintenance: normalizeDateField(asset.nextMaintenance),
     maintenance_interval_months: asset.maintenanceIntervalMonths,
-    last_uvv: asset.lastUvv || null,
-    next_tuev: asset.nextTuev || null,
+    last_uvv: normalizeDateField(asset.lastUvv),
+    next_tuev: normalizeDateField(asset.nextTuev),
     license_plate: asset.licensePlate || null,
     // Allgemeine Felder
     description: asset.description || null,
@@ -411,7 +419,7 @@ export function assetToDBAsset(asset: Asset, organizationId: string): Partial<DB
     cost_center: asset.costCenter || null,
     responsible_user_id: asset.responsibleUserId || null,
     purchase_price: asset.purchasePrice || null,
-    purchase_date: asset.purchaseDate || null,
+    purchase_date: normalizeDateField(asset.purchaseDate),
     residual_value: asset.residualValue || null,
     depreciation_years: asset.depreciationYears || null,
     supplier: asset.supplier || null,
@@ -419,15 +427,15 @@ export function assetToDBAsset(asset: Asset, organizationId: string): Partial<DB
     has_invoice: asset.hasInvoice || null,
     has_warranty_certificate: asset.hasWarrantyCertificate || null,
     has_manual: asset.hasManual || null,
-    available_from: asset.availableFrom || null,
+    available_from: normalizeDateField(asset.availableFrom),
     reserved_for_user_id: asset.reservedForUserId || null,
     is_decommissioned: asset.isDecommissioned || null,
-    decommissioned_date: asset.decommissionedDate || null,
+    decommissioned_date: normalizeDateField(asset.decommissionedDate),
     decommissioned_reason: asset.decommissionedReason || null,
     // Fahrzeuge-spezifisch
     vin: asset.vin || null,
     vehicle_registration_number: asset.vehicleRegistrationNumber || null,
-    first_registration_date: asset.firstRegistrationDate || null,
+    first_registration_date: normalizeDateField(asset.firstRegistrationDate),
     vehicle_class: asset.vehicleClass || null,
     engine_displacement: asset.engineDisplacement || null,
     power: asset.power || null,
@@ -436,7 +444,7 @@ export function assetToDBAsset(asset: Asset, organizationId: string): Partial<DB
     mileage: asset.mileage || null,
     insurance_company: asset.insuranceCompany || null,
     insurance_number: asset.insuranceNumber || null,
-    insurance_until: asset.insuranceUntil || null,
+    insurance_until: normalizeDateField(asset.insuranceUntil),
     vehicle_tax_monthly: asset.vehicleTaxMonthly || null,
     registration_authority: asset.registrationAuthority || null,
     has_vehicle_registration: asset.hasVehicleRegistration || null,
@@ -455,8 +463,8 @@ export function assetToDBAsset(asset: Asset, organizationId: string): Partial<DB
     rpm: asset.rpm || null,
     has_ce_marking: asset.hasCeMarking || null,
     has_gs_marking: asset.hasGsMarking || null,
-    last_uvv_inspection: asset.lastUvvInspection || null,
-    next_uvv_inspection: asset.nextUvvInspection || null,
+    last_uvv_inspection: normalizeDateField(asset.lastUvvInspection),
+    next_uvv_inspection: normalizeDateField(asset.nextUvvInspection),
     has_inspection_report: asset.hasInspectionReport || null,
     // Werkzeuge-spezifisch
     article_number: asset.articleNumber || null,
@@ -466,8 +474,8 @@ export function assetToDBAsset(asset: Asset, organizationId: string): Partial<DB
     tool_power: asset.toolPower || null,
     tool_voltage: asset.toolVoltage || null,
     requires_calibration: asset.requiresCalibration || null,
-    last_calibration: asset.lastCalibration || null,
-    next_calibration: asset.nextCalibration || null,
+    last_calibration: normalizeDateField(asset.lastCalibration),
+    next_calibration: normalizeDateField(asset.nextCalibration),
     tool_box_set: asset.toolBoxSet || null,
   };
 }

@@ -5,7 +5,7 @@ import { createAsset, createAssetsBulk } from '../services/supabaseAssetService'
 
 interface ImportModalProps {
   onClose: () => void;
-  onImportComplete: () => void;
+  onImportComplete: (stats: { success: number; failed: number }) => void;
   organizationId: string;
   existingAssets: Asset[];
 }
@@ -126,7 +126,7 @@ const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImportComplete, or
 
     setStep('complete');
     setIsImporting(false);
-    onImportComplete();
+    onImportComplete({ success: successCount, failed: failedCount });
   };
 
   const handleDownloadTemplate = (full: boolean) => {

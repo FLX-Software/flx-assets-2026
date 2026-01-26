@@ -640,12 +640,21 @@ const App: React.FC = () => {
       {isImportModalOpen && (
         <ImportModal
           onClose={() => setIsImportModalOpen(false)}
-          onImportComplete={async () => {
+          onImportComplete={async (stats) => {
             // Lade Assets neu nach Import
             if (currentUser?.organizationId) {
               await loadData(currentUser);
             }
-            showNotification('Assets erfolgreich importiert!', 'success');
+            // Zeige Benachrichtigung nur wenn Assets erfolgreich importiert wurden
+            if (stats.success > 0) {
+              if (stats.failed > 0) {
+                showNotification(`${stats.success} Assets erfolgreich importiert, ${stats.failed} fehlgeschlagen.`, 'warning');
+              } else {
+                showNotification(`${stats.success} Assets erfolgreich importiert!`, 'success');
+              }
+            } else if (stats.failed > 0) {
+              showNotification(`${stats.failed} Assets konnten nicht importiert werden.`, 'error');
+            }
           }}
           organizationId={currentUser.organizationId || ''}
           existingAssets={assets}
