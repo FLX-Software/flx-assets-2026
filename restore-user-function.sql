@@ -41,10 +41,10 @@ BEGIN
   -- Prüfe ob aktive Membership existiert
   SELECT EXISTS(
     SELECT 1 
-    FROM public.organization_members 
-    WHERE user_id = existing_user_id 
-      AND organization_id = restore_user_if_exists.organization_id
-      AND is_active = true
+    FROM public.organization_members om
+    WHERE om.user_id = existing_user_id 
+      AND om.organization_id = restore_user_if_exists.organization_id
+      AND om.is_active = true
   ) INTO membership_exists;
   
   -- Wenn Profil und Membership existieren, User ist bereits vollständig
@@ -61,7 +61,7 @@ BEGIN
   
   -- Stelle Membership wieder her (falls nicht vorhanden oder inaktiv)
   INSERT INTO public.organization_members (organization_id, user_id, role, is_active)
-  VALUES (organization_id, existing_user_id, user_role, true)
+  VALUES (restore_user_if_exists.organization_id, existing_user_id, user_role, true)
   ON CONFLICT (organization_id, user_id) 
   DO UPDATE SET is_active = true, role = user_role;
   
