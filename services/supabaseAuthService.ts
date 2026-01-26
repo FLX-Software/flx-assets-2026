@@ -20,62 +20,134 @@ export async function signUp(
   try {
     console.log('🔵 signUp: Starte User-Erstellung...', { email, organizationId, role });
     
-    // 1. User in Supabase Auth anlegen
-    console.log('🔵 signUp: Erstelle Auth-User...');
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: fullName,
-        },
-        emailRedirectTo: undefined, // Keine E-Mail-Bestätigung erforderlich für Admin-Erstellung
-      },
-    });
-
-    console.log('🔵 signUp: Auth-Response:', { 
-      hasUser: !!authData?.user, 
-      hasError: !!authError,
-      error: authError?.message 
-    });
-
-    if (authError) {
-      console.error('❌ signUp: Auth-Fehler:', authError);
+    // 0. Prüfe ob User bereits in auth.users existiert (z.B. nach Löschung)
+    // Falls ja, stelle ihn wieder her statt neu anzulegen
+    let userId: string | null = null;
+    try {
+      const { data: restoreData, error: restoreError } = await supabase.rpc('restore_user_if_exists', {
+        user_email: email,
+        full_name: fullName,
+        organization_id: organizationId,
+        user_role: role
+      });
       
-      // Spezielle Behandlung für Rate Limits
-      if (authError.message?.includes('rate limit') || authError.message?.includes('429')) {
+      if (!restoreError && restoreData) {
+        console.log('✅ signUp: User existiert bereits in auth.users, stelle wieder her...', restoreData);
+        userId = restoreData;
+        // Passwort kann nicht aktualisiert werden ohne Service Role, aber User kann sich mit altem Passwort einloggen
+        // Oder: Admin muss Passwort manuell zurücksetzen
+      }
+    } catch (restoreException: any) {
+      // Wenn Fehler "User existiert bereits und ist aktiv", dann Fehler zurückgeben
+      if (restoreException.message?.includes('existiert bereits und ist aktiv')) {
         return { 
           success: false, 
-          error: 'Zu viele Anfragen. Bitte warten Sie einige Minuten, bevor Sie einen neuen Benutzer erstellen.' 
+          error: 'Ein Benutzer mit dieser E-Mail-Adresse existiert bereits und ist aktiv.' 
         };
       }
-      
-      return { success: false, error: authError.message || 'Registrierung fehlgeschlagen' };
+      // Andere Fehler ignorieren, versuche normalen signUp
+      console.log('⚠️ signUp: restore_user_if_exists fehlgeschlagen, versuche normalen signUp...', restoreException.message);
+    }
+    
+    // 1. User in Supabase Auth anlegen (nur wenn nicht wiederhergestellt)
+    if (!userId) {
+      console.log('🔵 signUp: Erstelle Auth-User...');
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: fullName,
+          },
+          emailRedirectTo: undefined, // Keine E-Mail-Bestätigung erforderlich für Admin-Erstellung
+        },
+      });
+
+      console.log('🔵 signUp: Auth-Response:', { 
+        hasUser: !!authData?.user, 
+        hasError: !!authError,
+        error: authError?.message 
+      });
+
+      if (authError) {
+        console.error('❌ signUp: Auth-Fehler:', authError);
+        
+        // Spezielle Behandlung für Rate Limits
+        if (authError.message?.includes('rate limit') || authError.message?.includes('429')) {
+          return { 
+            success: false, 
+            error: 'Zu viele Anfragen. Bitte warten Sie einige Minuten, bevor Sie einen neuen Benutzer erstellen.' 
+          };
+        }
+        
+        // Wenn "User already registered" oder ähnlich, versuche Wiederherstellung
+        if (authError.message?.includes('already registered') || 
+            authError.message?.includes('already exists') ||
+            authError.message?.includes('User already registered')) {
+          console.log('⚠️ signUp: User bereits registriert, versuche Wiederherstellung...');
+          // Versuche erneut Wiederherstellung
+          try {
+            const { data: restoreData2, error: restoreError2 } = await supabase.rpc('restore_user_if_exists', {
+              user_email: email,
+              full_name: fullName,
+              organization_id: organizationId,
+              user_role: role
+            });
+            
+            if (!restoreError2 && restoreData2) {
+              userId = restoreData2;
+              console.log('✅ signUp: User erfolgreich wiederhergestellt nach signUp-Fehler');
+            } else {
+              return { 
+                success: false, 
+                error: 'Ein Benutzer mit dieser E-Mail-Adresse existiert bereits. Bitte löschen Sie den Benutzer vollständig aus Supabase Auth, um ihn erneut anzulegen.' 
+              };
+            }
+          } catch (restoreException2: any) {
+            return { 
+              success: false, 
+              error: 'Ein Benutzer mit dieser E-Mail-Adresse existiert bereits. Bitte löschen Sie den Benutzer vollständig aus Supabase Auth, um ihn erneut anzulegen.' 
+            };
+          }
+        } else {
+          return { success: false, error: authError.message || 'Registrierung fehlgeschlagen' };
+        }
+      }
+
+      if (!authData?.user) {
+        console.error('❌ signUp: Kein User-Objekt zurückgegeben');
+        return { success: false, error: 'Registrierung fehlgeschlagen: Kein User-Objekt erhalten' };
+      }
+
+      userId = authData.user.id;
+      console.log('✅ signUp: Auth-User erstellt, ID:', userId);
     }
 
-    if (!authData?.user) {
-      console.error('❌ signUp: Kein User-Objekt zurückgegeben');
-      return { success: false, error: 'Registrierung fehlgeschlagen: Kein User-Objekt erhalten' };
+    // 2. Profil und Membership erstellen (nur wenn User nicht wiederhergestellt wurde)
+    // Wenn User wiederhergestellt wurde, sind Profil und Membership bereits erstellt
+    const wasRestored = userId !== null && !authData?.user; // userId wurde von restore_user_if_exists gesetzt
+    
+    if (!wasRestored) {
+      // Profil wird automatisch vom Trigger erstellt (create-profile-trigger.sql)
+      // Warte kurz, damit der Trigger das Profil erstellt hat
+      console.log('🔵 signUp: Warte auf automatische Profil-Erstellung durch Trigger...');
+      await new Promise(resolve => setTimeout(resolve, 500)); // 500ms warten (reduziert von 1.5s)
+
+      // Versuche Profil zu erstellen - verwende SQL-Funktion um RLS zu umgehen
+      console.log('🔵 signUp: Erstelle/aktualisiere Profil über SQL-Funktion...');
+    } else {
+      console.log('✅ signUp: User wurde wiederhergestellt, Profil und Membership bereits vorhanden');
     }
-
-    const userId = authData.user.id;
-    console.log('✅ signUp: Auth-User erstellt, ID:', userId);
-
-    // 2. Profil wird automatisch vom Trigger erstellt (create-profile-trigger.sql)
-    // Warte kurz, damit der Trigger das Profil erstellt hat
-    console.log('🔵 signUp: Warte auf automatische Profil-Erstellung durch Trigger...');
-    await new Promise(resolve => setTimeout(resolve, 500)); // 500ms warten (reduziert von 1.5s)
-
-    // Versuche Profil zu erstellen - verwende SQL-Funktion um RLS zu umgehen
-    console.log('🔵 signUp: Erstelle/aktualisiere Profil über SQL-Funktion...');
+    
     const nameParts = fullName.split(' ');
     const firstName = nameParts[0] || '';
     const lastName = nameParts.slice(1).join(' ') || '';
 
     // Versuche Profil zu erstellen - verwende SQL-Funktion um RLS zu umgehen
     // Falls Funktion nicht existiert, verwende direkten INSERT mit Retry
+    // (Überspringe wenn User wiederhergestellt wurde)
     let profileError = null;
-    let profileCreated = false;
+    let profileCreated = wasRestored; // Wenn wiederhergestellt, ist Profil bereits erstellt
     
     try {
       // Versuche RPC-Funktion (falls vorhanden) mit Timeout
@@ -212,15 +284,16 @@ export async function signUp(
       console.log('✅ signUp: Profil erstellt oder existiert bereits');
     }
 
-    // 3. Membership anlegen
-    console.log('🔵 signUp: Erstelle Membership...', { organizationId, userId, role });
-    
-    // Membership-Erstellung mit Timeout und Retry
-    let memberError = null;
-    let retryCount = 0;
-    const maxRetries = 3;
-    
-    while (retryCount < maxRetries && !memberError) {
+    // 3. Membership anlegen (nur wenn User nicht wiederhergestellt wurde)
+    if (!wasRestored) {
+      console.log('🔵 signUp: Erstelle Membership...', { organizationId, userId, role });
+      
+      // Membership-Erstellung mit Timeout und Retry
+      let memberError = null;
+      let retryCount = 0;
+      const maxRetries = 3;
+      
+      while (retryCount < maxRetries && !memberError) {
       try {
         const memberPromise = supabase
           .from('organization_members')
@@ -267,9 +340,12 @@ export async function signUp(
       }
     }
 
-    if (memberError) {
-      console.error('❌ signUp: Membership-Erstellung fehlgeschlagen nach mehreren Versuchen:', memberError);
-      return { success: false, error: `Membership konnte nicht erstellt werden: ${memberError.message || 'Unbekannter Fehler'}` };
+      if (memberError) {
+        console.error('❌ signUp: Membership-Erstellung fehlgeschlagen nach mehreren Versuchen:', memberError);
+        return { success: false, error: `Membership konnte nicht erstellt werden: ${memberError.message || 'Unbekannter Fehler'}` };
+      }
+    } else {
+      console.log('✅ signUp: Membership bereits vorhanden (User wurde wiederhergestellt)');
     }
 
     // 4. User-Objekt für Frontend zusammenbauen
