@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Asset } from '../types';
 import { validateCSVImport, generateImportTemplate, ImportResult, ImportError } from '../services/importService';
-import { createAsset } from '../services/supabaseAssetService';
+import { createAsset, createAssetsBulk } from '../services/supabaseAssetService';
 
 interface ImportModalProps {
   onClose: () => void;
@@ -56,7 +56,8 @@ const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImportComplete, or
     setImportProgress({ current: 0, total: importResult.validAssets.length });
     setImportStats({ success: 0, failed: 0 });
 
-    const batchSize = 50;
+    // Bulk-Import: Kleinere Batches für bessere Performance (20 Assets pro Batch)
+    const batchSize = 20;
     const batches: Asset[][] = [];
     for (let i = 0; i < importResult.validAssets.length; i += batchSize) {
       batches.push(importResult.validAssets.slice(i, i + batchSize));
@@ -65,11 +66,41 @@ const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImportComplete, or
     let successCount = 0;
     let failedCount = 0;
 
+    // Importiere Batches sequenziell mit Bulk-Insert
     for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
       const batch = batches[batchIndex];
       
-      await Promise.all(
-        batch.map(async (asset) => {
+      try {
+        // Füge organizationId zu allen Assets hinzu
+        const assetsWithOrg = batch.map(asset => ({
+          ...asset,
+          organizationId,
+        }));
+        
+        // Bulk-Insert für diesen Batch
+        const result = await createAssetsBulk(assetsWithOrg, organizationId);
+        
+        successCount += result.success.length;
+        failedCount += result.failed.length;
+        
+        // Update Stats und Progress
+        setImportStats({ success: successCount, failed: failedCount });
+        setImportProgress(prev => ({ 
+          ...prev, 
+          current: prev.current + result.success.length + result.failed.length 
+        }));
+        
+        // Log Fehler falls vorhanden
+        if (result.failed.length > 0) {
+          console.warn(`⚠️ Batch ${batchIndex + 1}: ${result.failed.length} Assets fehlgeschlagen`);
+          result.failed.forEach(({ asset, error }) => {
+            console.error(`❌ Asset ${asset.brand} ${asset.model}: ${error}`);
+          });
+        }
+      } catch (error: any) {
+        console.error(`❌ Batch ${batchIndex + 1} fehlgeschlagen:`, error);
+        // Fallback: Versuche Assets einzeln zu erstellen
+        for (const asset of batch) {
           try {
             const assetWithOrg: Asset = {
               ...asset,
@@ -77,17 +108,22 @@ const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImportComplete, or
             };
             await createAsset(assetWithOrg, organizationId);
             successCount++;
-          } catch (error) {
-            console.error('Fehler beim Importieren des Assets:', error);
+          } catch (singleError: any) {
+            console.error('Fehler beim Importieren des Assets:', singleError);
             failedCount++;
           } finally {
             setImportProgress(prev => ({ ...prev, current: prev.current + 1 }));
+            setImportStats({ success: successCount, failed: failedCount });
           }
-        })
-      );
+        }
+      }
+      
+      // Kurze Pause zwischen Batches, um Rate-Limiting zu vermeiden
+      if (batchIndex < batches.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 200)); // 200ms Pause
+      }
     }
 
-    setImportStats({ success: successCount, failed: failedCount });
     setStep('complete');
     setIsImporting(false);
     onImportComplete();
@@ -104,10 +140,10 @@ const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImportComplete, or
           <div>
             <span className="text-blue-500 font-black text-[10px] uppercase tracking-[0.3em] italic block mb-1">Daten Import</span>
             <h2 className="text-2xl font-black text-white uppercase italic tracking-tighter leading-none">
-              {step === 'upload' && 'CSV-Datei <span className="text-blue-500">hochladen</span>'}
-              {step === 'preview' && 'Import <span className="text-blue-500">Vorschau</span>'}
-              {step === 'importing' && 'Import <span className="text-blue-500">läuft</span>'}
-              {step === 'complete' && 'Import <span className="text-blue-500">abgeschlossen</span>'}
+              {step === 'upload' && <>CSV-Datei <span className="text-blue-500">hochladen</span></>}
+              {step === 'preview' && <>Import <span className="text-blue-500">Vorschau</span></>}
+              {step === 'importing' && <>Import <span className="text-blue-500">läuft</span></>}
+              {step === 'complete' && <>Import <span className="text-blue-500">abgeschlossen</span></>}
             </h2>
           </div>
           <button onClick={onClose} className="bg-white/10 p-2 rounded-xl text-white hover:bg-white/20 transition-colors">
@@ -253,17 +289,32 @@ const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImportComplete, or
             <div className="space-y-6">
               <div className="text-center">
                 <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                <div className="text-sm font-black text-slate-700 dark:text-slate-300 uppercase italic">
+                <div className="text-sm font-black text-slate-700 dark:text-slate-300 uppercase italic mb-2">
                   Importiere Assets...
                 </div>
-                <div className="text-xs text-slate-500 dark:text-slate-400 mt-2">
-                  {importProgress.current} / {importProgress.total}
+                <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">
+                  {importProgress.current} von {importProgress.total} Assets
                 </div>
-                <div className="w-full bg-slate-200 dark:bg-slate-800 rounded-full h-2 mt-4">
+                {importProgress.total > 0 && (
+                  <div className="text-xs text-blue-600 dark:text-blue-400 font-bold mb-4">
+                    {Math.round((importProgress.current / importProgress.total) * 100)}%
+                  </div>
+                )}
+                <div className="w-full bg-slate-200 dark:bg-slate-800 rounded-full h-3 mt-4">
                   <div
-                    className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${(importProgress.current / importProgress.total) * 100}%` }}
+                    className="bg-blue-600 h-3 rounded-full transition-all duration-300"
+                    style={{ width: `${importProgress.total > 0 ? (importProgress.current / importProgress.total) * 100 : 0}%` }}
                   ></div>
+                </div>
+                <div className="mt-4 grid grid-cols-2 gap-4 max-w-xs mx-auto">
+                  <div className="p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl">
+                    <div className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase italic mb-1">Erfolgreich</div>
+                    <div className="text-xl font-black text-emerald-700 dark:text-emerald-300">{importStats.success}</div>
+                  </div>
+                  <div className="p-3 bg-rose-50 dark:bg-rose-900/20 rounded-xl">
+                    <div className="text-[10px] font-black text-rose-600 dark:text-rose-400 uppercase italic mb-1">Fehler</div>
+                    <div className="text-xl font-black text-rose-700 dark:text-rose-300">{importStats.failed}</div>
+                  </div>
                 </div>
               </div>
             </div>

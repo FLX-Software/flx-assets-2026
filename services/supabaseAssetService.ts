@@ -73,6 +73,53 @@ export async function createAsset(asset: Asset, organizationId: string): Promise
 }
 
 /**
+ * Erstellt mehrere Assets auf einmal (Bulk-Insert für bessere Performance)
+ */
+export async function createAssetsBulk(assets: Asset[], organizationId: string): Promise<{ success: Asset[]; failed: Array<{ asset: Asset; error: string }> }> {
+  console.log('💾 createAssetsBulk gestartet', { count: assets.length, organizationId });
+  
+  const dbAssets = assets.map(asset => assetToDBAsset(asset, organizationId));
+  
+  const { data, error } = await supabase
+    .from('assets')
+    .insert(dbAssets)
+    .select();
+
+  if (error) {
+    console.error('❌ Fehler beim Bulk-Insert:', error);
+    // Falls Bulk-Insert fehlschlägt, versuche Assets einzeln zu erstellen
+    const results: { success: Asset[]; failed: Array<{ asset: Asset; error: string }> } = {
+      success: [],
+      failed: []
+    };
+    
+    for (const asset of assets) {
+      try {
+        const created = await createAsset(asset, organizationId);
+        results.success.push(created);
+      } catch (err: any) {
+        results.failed.push({ asset, error: err.message || 'Unbekannter Fehler' });
+      }
+    }
+    
+    return results;
+  }
+
+  if (!data || data.length === 0) {
+    console.error('❌ Keine Assets zurückgegeben');
+    return { success: [], failed: assets.map(a => ({ asset: a, error: 'Keine Daten zurückgegeben' })) };
+  }
+
+  const successAssets = data.map(dbAsset => dbAssetToAsset(dbAsset, []));
+  console.log('✅ Bulk-Insert erfolgreich', { count: successAssets.length });
+  
+  return {
+    success: successAssets,
+    failed: []
+  };
+}
+
+/**
  * Aktualisiert ein Asset
  * @param loadMaintenanceEvents - Wenn false, werden Maintenance-Events nicht geladen (für Performance)
  */
