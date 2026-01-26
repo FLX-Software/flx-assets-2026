@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { User, UserRole } from '../types';
 import { signUp } from '../services/supabaseAuthService';
 import { removeMemberFromOrganization, updateMemberRole } from '../services/supabaseOrganizationService';
+import { supabase } from '../lib/supabaseClient';
 
 interface UserManagementModalProps {
   users: User[];
@@ -128,8 +129,29 @@ const UserManagementModal: React.FC<UserManagementModalProps> = ({ users, organi
     }
 
     try {
-      // Entferne User aus Organisation (soft delete)
-      await removeMemberFromOrganization(organizationId, id);
+      // Versuche User komplett zu löschen (Membership + Profil)
+      // Falls RPC-Funktion nicht existiert, nur Membership deaktivieren
+      try {
+        const { error: deleteError } = await supabase.rpc('delete_user_completely_secure', {
+          user_id: id
+        });
+
+        if (deleteError) {
+          // Falls Funktion nicht existiert, nur Membership deaktivieren
+          if (deleteError.code === '42883' || deleteError.message?.includes('function') || deleteError.message?.includes('does not exist')) {
+            console.log('⚠️ delete_user_completely_secure Funktion existiert nicht, entferne nur aus Organisation...');
+            await removeMemberFromOrganization(organizationId, id);
+          } else {
+            throw deleteError;
+          }
+        } else {
+          console.log('✅ User komplett gelöscht (Membership + Profil)');
+        }
+      } catch (rpcError: any) {
+        // Fallback: Nur aus Organisation entfernen
+        console.log('⚠️ RPC-Funktion fehlgeschlagen, entferne nur aus Organisation...', rpcError.message);
+        await removeMemberFromOrganization(organizationId, id);
+      }
       
       // Aktualisiere lokale Liste
       onUpdateUsers(users.filter(u => u.id !== id));
