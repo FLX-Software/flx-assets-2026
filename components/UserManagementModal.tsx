@@ -62,10 +62,17 @@ const UserManagementModal: React.FC<UserManagementModalProps> = ({ users, organi
     }
 
     setIsCreating(true);
+    console.log('🔵 UserManagementModal: Starte User-Erstellung...', { 
+      email: formData.email, 
+      organizationId,
+      role: formData.role 
+    });
+    
     try {
       const fullName = `${formData.firstName} ${formData.lastName}`;
       
       // Erstelle User in Supabase Auth + Profil + Membership
+      console.log('🔵 UserManagementModal: Rufe signUp auf...');
       const result = await signUp(
         formData.email,
         formData.password,
@@ -74,11 +81,16 @@ const UserManagementModal: React.FC<UserManagementModalProps> = ({ users, organi
         formData.role
       );
 
+      console.log('🔵 UserManagementModal: signUp Ergebnis:', result);
+
       if (!result.success || !result.user) {
+        console.error('❌ UserManagementModal: User-Erstellung fehlgeschlagen:', result.error);
         onShowNotification(result.error || 'Fehler beim Erstellen des Benutzers.', 'error');
         setIsCreating(false);
         return;
       }
+
+      console.log('✅ UserManagementModal: User erfolgreich erstellt');
 
       // User zur Liste hinzufügen
       onUpdateUsers([...users, result.user]);

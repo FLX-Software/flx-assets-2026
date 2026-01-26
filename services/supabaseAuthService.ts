@@ -18,19 +18,42 @@ export async function signUp(
   role: UserRole = UserRole.STAFF
 ): Promise<AuthResult> {
   try {
+    console.log('🔵 signUp: Starte User-Erstellung...', { email, organizationId, role });
+    
     // 1. User in Supabase Auth anlegen
+    console.log('🔵 signUp: Erstelle Auth-User...');
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        data: {
+          full_name: fullName,
+        },
+        emailRedirectTo: undefined, // Keine E-Mail-Bestätigung erforderlich für Admin-Erstellung
+      },
     });
 
-    if (authError || !authData.user) {
-      return { success: false, error: authError?.message || 'Registrierung fehlgeschlagen' };
+    console.log('🔵 signUp: Auth-Response:', { 
+      hasUser: !!authData?.user, 
+      hasError: !!authError,
+      error: authError?.message 
+    });
+
+    if (authError) {
+      console.error('❌ signUp: Auth-Fehler:', authError);
+      return { success: false, error: authError.message || 'Registrierung fehlgeschlagen' };
+    }
+
+    if (!authData?.user) {
+      console.error('❌ signUp: Kein User-Objekt zurückgegeben');
+      return { success: false, error: 'Registrierung fehlgeschlagen: Kein User-Objekt erhalten' };
     }
 
     const userId = authData.user.id;
+    console.log('✅ signUp: Auth-User erstellt, ID:', userId);
 
     // 2. Profil in profiles-Tabelle anlegen
+    console.log('🔵 signUp: Erstelle Profil...');
     const nameParts = fullName.split(' ');
     const firstName = nameParts[0] || '';
     const lastName = nameParts.slice(1).join(' ') || '';
@@ -43,12 +66,13 @@ export async function signUp(
       });
 
     if (profileError) {
-      // Rollback: Auth-User löschen (optional, oder manuell)
-      console.error('Profil-Erstellung fehlgeschlagen:', profileError);
-      return { success: false, error: 'Profil konnte nicht erstellt werden' };
+      console.error('❌ signUp: Profil-Erstellung fehlgeschlagen:', profileError);
+      return { success: false, error: `Profil konnte nicht erstellt werden: ${profileError.message}` };
     }
+    console.log('✅ signUp: Profil erstellt');
 
     // 3. Membership anlegen
+    console.log('🔵 signUp: Erstelle Membership...', { organizationId, userId, role });
     const { error: memberError } = await supabase
       .from('organization_members')
       .insert({
@@ -59,9 +83,10 @@ export async function signUp(
       });
 
     if (memberError) {
-      console.error('Membership-Erstellung fehlgeschlagen:', memberError);
-      return { success: false, error: 'Membership konnte nicht erstellt werden' };
+      console.error('❌ signUp: Membership-Erstellung fehlgeschlagen:', memberError);
+      return { success: false, error: `Membership konnte nicht erstellt werden: ${memberError.message}` };
     }
+    console.log('✅ signUp: Membership erstellt');
 
     // 4. User-Objekt für Frontend zusammenbauen
     const user: User = {
@@ -75,8 +100,10 @@ export async function signUp(
       organizationId,
     };
 
+    console.log('✅ signUp: User erfolgreich erstellt:', user);
     return { success: true, user };
   } catch (error: any) {
+    console.error('❌ signUp: Unerwarteter Fehler:', error);
     return { success: false, error: error.message || 'Unbekannter Fehler' };
   }
 }
