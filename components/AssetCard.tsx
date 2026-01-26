@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Asset, User, AssetTypeLabels } from '../types';
 
 interface AssetCardProps {
@@ -11,6 +11,33 @@ interface AssetCardProps {
 }
 
 const AssetCard: React.FC<AssetCardProps> = ({ asset, assignedUser, onAction, actionLabel, onDetails }) => {
+  const [isInView, setIsInView] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const imgRef = useRef<HTMLDivElement>(null);
+
+  // Lazy Loading mit Intersection Observer
+  useEffect(() => {
+    if (!imgRef.current) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setIsInView(true);
+            observer.disconnect();
+          }
+        });
+      },
+      { rootMargin: '50px' } // Lade 50px vor dem sichtbaren Bereich
+    );
+
+    observer.observe(imgRef.current);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
   const conditionColor = (c: number) => {
     if (c >= 4) return 'bg-blue-500';
     if (c >= 2) return 'bg-slate-400';
@@ -22,17 +49,32 @@ const AssetCard: React.FC<AssetCardProps> = ({ asset, assignedUser, onAction, ac
       onClick={() => onDetails?.(asset)}
       className={`bg-white dark:bg-[#0d1117] rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col transition-all hover:shadow-xl hover:shadow-blue-500/5 group ${onDetails ? 'cursor-pointer' : ''}`}
     >
-      <div className="relative h-44 overflow-hidden bg-slate-200 dark:bg-slate-800">
+      <div ref={imgRef} className="relative h-44 overflow-hidden bg-slate-200 dark:bg-slate-800">
         {asset.imageUrl ? (
-          <img 
-            src={asset.imageUrl} 
-            alt={asset.model} 
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
-            onError={(e) => {
-              // Fallback bei Fehler
-              (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/asset/400/300';
-            }}
-          />
+          <>
+            {isInView ? (
+              <img 
+                src={asset.imageUrl + (asset.imageUrl.includes('supabase.co') ? `?t=${Date.now()}` : '')} 
+                alt={asset.model} 
+                className={`w-full h-full object-cover transition-all duration-700 group-hover:scale-110 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+                onLoad={() => setImageLoaded(true)}
+                onError={(e) => {
+                  console.warn('⚠️ Bild konnte nicht geladen werden:', asset.imageUrl);
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
+                loading="lazy"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center bg-slate-100 dark:bg-slate-900">
+                <div className="w-8 h-8 border-2 border-slate-300 border-t-blue-500 rounded-full animate-spin"></div>
+              </div>
+            )}
+            {!imageLoaded && isInView && (
+              <div className="absolute inset-0 flex items-center justify-center bg-slate-100 dark:bg-slate-900">
+                <div className="w-8 h-8 border-2 border-slate-300 border-t-blue-500 rounded-full animate-spin"></div>
+              </div>
+            )}
+          </>
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-slate-100 dark:bg-slate-900">
             <svg className="w-16 h-16 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

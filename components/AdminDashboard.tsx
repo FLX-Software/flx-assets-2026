@@ -207,7 +207,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ assets, users, loans, o
                   >
                     <div className="flex items-center gap-4 mb-3">
                       {asset.imageUrl ? (
-                        <img src={asset.imageUrl} className="w-12 h-12 rounded-xl object-cover" />
+                        <img 
+                          src={asset.imageUrl + (asset.imageUrl.includes('supabase.co') ? `?t=${Date.now()}` : '')} 
+                          className="w-12 h-12 rounded-xl object-cover" 
+                          loading="lazy"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none';
+                          }}
+                        />
                       ) : (
                         <div className="w-12 h-12 rounded-xl bg-slate-200 dark:bg-slate-800 flex items-center justify-center">
                           <svg className="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

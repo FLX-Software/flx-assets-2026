@@ -2,6 +2,7 @@
 import React, { useState, useRef } from 'react';
 import { Asset, AssetType, AssetTypeLabels } from '../types';
 import { uploadAssetImage } from '../services/supabaseStorageService';
+import { compressImage, fileToBase64, shouldCompress } from '../services/imageCompressionService';
 
 interface AssetCreateModalProps {
   onClose: () => void;
@@ -53,10 +54,17 @@ const AssetCreateModal: React.FC<AssetCreateModalProps> = ({ onClose, onSave, or
     });
   };
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       setSelectedFile(file);
+      
+      // Komprimiere Bild für Vorschau (schneller)
+      console.log('🖼️ Bereite Bild-Vorschau vor...');
+      const compressed = await compressImage(file, { maxWidth: 400, quality: 0.7 });
+      const fileForPreview = compressed || file;
+      
+      // Zeige komprimierte Vorschau
       const reader = new FileReader();
       reader.onloadend = () => {
         setFormData(prev => ({
@@ -64,7 +72,7 @@ const AssetCreateModal: React.FC<AssetCreateModalProps> = ({ onClose, onSave, or
           imageUrl: reader.result as string
         }));
       };
-      reader.readAsDataURL(file);
+      reader.readAsDataURL(fileForPreview);
     }
   };
 
@@ -84,41 +92,48 @@ const AssetCreateModal: React.FC<AssetCreateModalProps> = ({ onClose, onSave, or
       if (selectedFile) {
         console.log('📤 Starte Bild-Upload...', { fileName: selectedFile.name, size: selectedFile.size });
         
-        // Optimierter Upload: Kurzer Timeout (10 Sekunden), dann sofort Base64-Fallback
-        console.log('📤 Versuche schnellen Upload zu Supabase Storage (10s Timeout)...');
-        
-        const abortController = new AbortController();
-        const uploadPromise = uploadAssetImage(selectedFile, assetId, organizationId, abortController.signal);
-        const timeoutPromise = new Promise<{ url: null; error: string }>((resolve) => {
-          setTimeout(() => {
-            abortController.abort();
-            resolve({ url: null, error: 'Upload-Timeout: Upload dauert zu lange, verwende Base64-Fallback' });
-          }, 10000); // Nur 10 Sekunden Timeout für schnelle Reaktion
+        // Komprimiere Bild vor Upload für bessere Performance
+        console.log('🖼️ Komprimiere Bild vor Upload...');
+        const compressedFile = await compressImage(selectedFile, { 
+          maxWidth: 1200, 
+          maxHeight: 1200, 
+          quality: 0.85 
         });
+        const fileToUpload = compressedFile || selectedFile;
         
-        const uploadResult = await Promise.race([uploadPromise, timeoutPromise]);
+        // Prüfe ob Base64 verwendet werden sollte (nur für kleine Bilder)
+        const MAX_BASE64_SIZE = 50 * 1024; // 50KB
+        const shouldUseBase64 = fileToUpload.size < MAX_BASE64_SIZE;
         
-        if (uploadResult.error) {
-          console.log('⏩ Upload zu langsam, verwende sofort Base64-Fallback für bessere Performance...');
-          
-          // Fallback: Verwende Base64-Daten-URL (bereits in formData.imageUrl vorhanden)
-          if (formData.imageUrl && formData.imageUrl.startsWith('data:')) {
-            imageUrl = formData.imageUrl;
-            console.log('✅ Base64-Bild wird verwendet (Größe:', Math.round(imageUrl.length / 1024), 'KB)');
-          } else {
-            // Konvertiere File zu Base64
-            const base64Promise = new Promise<string>((resolve, reject) => {
-              const reader = new FileReader();
-              reader.onloadend = () => resolve(reader.result as string);
-              reader.onerror = reject;
-              reader.readAsDataURL(selectedFile);
-            });
-            imageUrl = await base64Promise;
-            console.log('✅ Bild zu Base64 konvertiert (Größe:', Math.round(imageUrl.length / 1024), 'KB)');
-          }
+        if (shouldUseBase64) {
+          // Kleine Bilder: Direkt als Base64 speichern (schnell)
+          console.log('💾 Bild ist klein genug, verwende Base64 (schneller)...');
+          imageUrl = await fileToBase64(fileToUpload, { maxWidth: 800, quality: 0.8 });
+          console.log('✅ Base64-Bild erstellt (Größe:', Math.round(imageUrl.length / 1024), 'KB)');
         } else {
-          console.log('✅ Upload erfolgreich:', uploadResult.url);
-          imageUrl = uploadResult.url;
+          // Größere Bilder: Versuche Upload zu Supabase (mit kurzem Timeout)
+          console.log('📤 Versuche schnellen Upload zu Supabase Storage (8s Timeout)...');
+          
+          const abortController = new AbortController();
+          const uploadPromise = uploadAssetImage(fileToUpload, assetId, organizationId, abortController.signal);
+          const timeoutPromise = new Promise<{ url: null; error: string }>((resolve) => {
+            setTimeout(() => {
+              abortController.abort();
+              resolve({ url: null, error: 'Upload-Timeout: Upload dauert zu lange' });
+            }, 8000); // 8 Sekunden Timeout
+          });
+          
+          const uploadResult = await Promise.race([uploadPromise, timeoutPromise]);
+          
+          if (uploadResult.error) {
+            // Upload fehlgeschlagen: Verwende komprimiertes Base64
+            console.log('⏩ Upload zu langsam, verwende komprimiertes Base64...');
+            imageUrl = await fileToBase64(fileToUpload, { maxWidth: 800, quality: 0.75 });
+            console.log('✅ Komprimiertes Base64-Bild erstellt (Größe:', Math.round(imageUrl.length / 1024), 'KB)');
+          } else {
+            console.log('✅ Upload erfolgreich:', uploadResult.url);
+            imageUrl = uploadResult.url;
+          }
         }
       }
 
