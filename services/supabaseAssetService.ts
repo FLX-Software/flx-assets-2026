@@ -74,8 +74,13 @@ export async function createAsset(asset: Asset, organizationId: string): Promise
 
 /**
  * Aktualisiert ein Asset
+ * @param loadMaintenanceEvents - Wenn false, werden Maintenance-Events nicht geladen (für Performance)
  */
-export async function updateAsset(asset: Asset, organizationId: string): Promise<Asset> {
+export async function updateAsset(
+  asset: Asset, 
+  organizationId: string, 
+  loadMaintenanceEvents: boolean = true
+): Promise<Asset> {
   const dbAsset = assetToDBAsset(asset, organizationId);
   const { id, ...updateData } = dbAsset;
 
@@ -91,7 +96,10 @@ export async function updateAsset(asset: Asset, organizationId: string): Promise
     throw error || new Error('Asset konnte nicht aktualisiert werden');
   }
 
-  const maintenanceEvents = await fetchMaintenanceEvents(asset.id);
+  // Maintenance-Events nur laden, wenn explizit gewünscht (für Performance)
+  const maintenanceEvents = loadMaintenanceEvents 
+    ? await fetchMaintenanceEvents(asset.id) 
+    : [];
   return dbAssetToAsset(data, maintenanceEvents);
 }
 

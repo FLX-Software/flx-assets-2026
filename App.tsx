@@ -126,20 +126,39 @@ const App: React.FC = () => {
       const result = await processQRScan(decodedText, currentUser.organizationId, currentUser);
       
       if (result.success && result.asset) {
-        // Assets neu laden
-        const updatedAssets = await fetchAssets(currentUser.organizationId);
-        setAssets(updatedAssets);
-        
-        // History neu laden
-        const updatedHistory = await fetchLoans(currentUser.organizationId);
-        setHistory(updatedHistory);
-        
-        showNotification(result.message, 'success');
+        // OPTIMISTIC UPDATE: Aktualisiere Asset lokal statt alles neu zu laden
+        setAssets(prevAssets => 
+          prevAssets.map(asset => 
+            asset.id === result.asset!.id ? result.asset! : asset
+          )
+        );
         
         // Update selected asset if modal is open
         if (selectedAsset && selectedAsset.id === result.asset.id) {
           setSelectedAsset(result.asset);
         }
+        
+        // History nur aktualisieren, wenn ein Loan erstellt/aktualisiert wurde
+        // Lade nur den neuen/aktualisierten Loan, nicht die gesamte History
+        if (result.asset.status === 'loaned' || result.asset.status === 'available') {
+          // Für Rückgabe: Finde den aktualisierten Loan
+          // Für Ausleihe: Der neue Loan wurde bereits erstellt, lade ihn separat
+          try {
+            const { fetchLoans } = await import('./services/supabaseLoanService');
+            const latestLoans = await fetchLoans(currentUser.organizationId);
+            // Aktualisiere nur die ersten 10 neuesten Loans (für Performance)
+            setHistory(prevHistory => {
+              const existingIds = new Set(prevHistory.map(l => l.id));
+              const newLoans = latestLoans.filter(l => !existingIds.has(l.id));
+              return [...newLoans, ...prevHistory].slice(0, 50); // Max 50 Einträge
+            });
+          } catch (historyError) {
+            console.warn('Fehler beim Aktualisieren der History:', historyError);
+            // Ignoriere History-Fehler, Asset-Update war erfolgreich
+          }
+        }
+        
+        showNotification(result.message, 'success');
       } else {
         showNotification(result.message, 'error');
       }

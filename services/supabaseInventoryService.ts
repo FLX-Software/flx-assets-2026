@@ -12,22 +12,22 @@ export async function processQRScan(
   currentUser: User
 ): Promise<{ success: boolean; message: string; asset?: Asset }> {
   try {
-    // Asset anhand QR-Code finden
-    const { data: assets, error: assetError } = await supabase
+    // Asset anhand QR-Code finden (direkt, ohne fetchAsset um Performance zu sparen)
+    const { data: dbAsset, error: assetError } = await supabase
       .from('assets')
       .select('*')
       .eq('qr_string', qrData)
       .eq('organization_id', organizationId)
       .single();
 
-    if (assetError || !assets) {
+    if (assetError || !dbAsset) {
       return { success: false, message: 'Unbekannter QR-Code!' };
     }
 
-    const asset = await fetchAsset(assets.id);
-    if (!asset) {
-      return { success: false, message: 'Asset nicht gefunden!' };
-    }
+    // Konvertiere DB-Asset zu Asset (ohne Maintenance-Events für Performance)
+    // Maintenance-Events werden nur geladen, wenn das Asset-Detail-Modal geöffnet wird
+    const { dbAssetToAsset } = await import('../types');
+    const asset = dbAssetToAsset(dbAsset, []); // Leere Maintenance-Events für Performance
 
     if (asset.status === 'available') {
       // AUSLEIHE
@@ -37,7 +37,8 @@ export async function processQRScan(
         status: 'loaned',
         currentUserId: currentUser.id,
       };
-      await updateAsset(updatedAsset, organizationId);
+      // Maintenance-Events nicht laden für Performance (werden nur im Detail-Modal benötigt)
+      await updateAsset(updatedAsset, organizationId, false);
 
       // 2. Loan-Record erstellen
       await createLoan(organizationId, asset.id, currentUser.id);
@@ -63,12 +64,21 @@ export async function processQRScan(
         status: 'available',
         currentUserId: null,
       };
-      await updateAsset(updatedAsset, organizationId);
+      // Maintenance-Events nicht laden für Performance (werden nur im Detail-Modal benötigt)
+      await updateAsset(updatedAsset, organizationId, false);
 
-      // 2. Aktiven Loan schließen
-      const activeLoan = await findActiveLoan(asset.id);
-      if (activeLoan) {
-        await returnLoan(activeLoan.id);
+      // 2. Aktiven Loan schließen (ohne zusätzliche Query, direkt über asset_id)
+      const { data: activeLoanData, error: loanError } = await supabase
+        .from('loans')
+        .select('id')
+        .eq('asset_id', asset.id)
+        .is('timestamp_in', null)
+        .order('timestamp_out', { ascending: false })
+        .limit(1)
+        .single();
+      
+      if (!loanError && activeLoanData) {
+        await returnLoan(activeLoanData.id);
       }
 
       return {
