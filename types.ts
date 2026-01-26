@@ -301,7 +301,7 @@ export function dbAssetToAsset(dbAsset: DBAsset, repairHistory: RepairEntry[] = 
     purchaseYear: dbAsset.purchase_year || new Date().getFullYear(),
     warrantyUntil: dbAsset.warranty_until || '',
     condition: dbAsset.condition || 5,
-    imageUrl: dbAsset.image_url || 'https://picsum.photos/seed/asset/400/300',
+    imageUrl: dbAsset.image_url || '', // Kein Standardbild - leer lassen wenn nicht vorhanden
     qrCode: dbAsset.qr_string,
     currentUserId: dbAsset.current_user_id,
     status: dbAsset.status,

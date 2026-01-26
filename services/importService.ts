@@ -448,7 +448,7 @@ export async function validateCSVImport(
         purchaseYear: result.asset.purchaseYear ?? new Date().getFullYear(), // Nur wenn undefined
         warrantyUntil: result.asset.warrantyUntil || undefined, // Nicht als leerer String setzen
         condition: result.asset.condition ?? 5, // Nur wenn undefined
-        imageUrl: 'https://picsum.photos/seed/newasset/400/300',
+        imageUrl: result.asset.imageUrl || '', // Kein Standardbild - leer lassen wenn nicht vorhanden
         qrCode: result.asset.qrCode || '',
         currentUserId: null,
         status: (result.asset.status === 'available' || result.asset.status === 'loaned') ? result.asset.status : 'available', // Status muss gültig sein

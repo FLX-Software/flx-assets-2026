@@ -19,7 +19,7 @@ const AssetCreateModal: React.FC<AssetCreateModalProps> = ({ onClose, onSave, or
     purchaseYear: new Date().getFullYear(),
     warrantyUntil: new Date(new Date().setFullYear(new Date().getFullYear() + 2)).toISOString().split('T')[0],
     condition: 5,
-    imageUrl: 'https://picsum.photos/seed/newasset/400/300',
+    imageUrl: '', // Kein Standardbild - leer lassen
     qrCode: `QR_${Math.random().toString(36).substring(2, 9).toUpperCase()}`,
     status: 'available',
     currentUserId: null,
@@ -77,7 +77,7 @@ const AssetCreateModal: React.FC<AssetCreateModalProps> = ({ onClose, onSave, or
 
     try {
       setIsUploading(true);
-      let imageUrl = formData.imageUrl || 'https://picsum.photos/seed/newasset/400/300';
+      let imageUrl = formData.imageUrl || ''; // Kein Standardbild - leer lassen wenn nicht vorhanden
 
       const assetId = `a-${Date.now()}`;
 
@@ -183,7 +183,18 @@ const AssetCreateModal: React.FC<AssetCreateModalProps> = ({ onClose, onSave, or
                     <div>
                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Asset Foto</label>
                       <div onClick={() => fileInputRef.current?.click()} className="relative rounded-2xl overflow-hidden aspect-video shadow-inner bg-slate-100 dark:bg-slate-900 border-2 border-dashed border-slate-200 dark:border-slate-800 cursor-pointer group">
-                        <img src={formData.imageUrl} alt="Preview" className="w-full h-full object-cover" />
+                        {formData.imageUrl ? (
+                          <img src={formData.imageUrl} alt="Preview" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <div className="text-center">
+                              <svg className="w-12 h-12 text-slate-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                              </svg>
+                              <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Bild hinzufügen</p>
+                            </div>
+                          </div>
+                        )}
                         <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageChange} />
                       </div>
                     </div>
