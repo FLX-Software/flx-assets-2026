@@ -45,20 +45,22 @@ self.addEventListener('fetch', (event) => {
   // Prüfe ob die Anfrage gecacht werden soll
   const shouldCache = !NO_CACHE_PATTERNS.some(pattern => pattern.test(url.pathname));
   
-  // Für Assets die nicht gecacht werden sollen, direkt fetchen
+  // Für Assets die nicht gecacht werden sollen: Network-First (immer frisch laden)
   if (!shouldCache) {
-    event.respondWith(fetch(event.request));
+    event.respondWith(
+      fetch(event.request).catch(() => {
+        // Bei Fehler: Versuche aus Cache (Fallback)
+        return caches.match(event.request);
+      })
+    );
     return;
   }
   
-  // Für andere Anfragen: Cache-First Strategie
+  // Für andere Anfragen: Network-First Strategie (immer versuchen zu fetchen, dann Cache)
   event.respondWith(
-    caches.match(event.request).then((response) => {
-      if (response) {
-        return response;
-      }
-      return fetch(event.request).then((response) => {
-        // Nur GET-Requests cachen
+    fetch(event.request)
+      .then((response) => {
+        // Nur GET-Requests und erfolgreiche Responses cachen
         if (event.request.method === 'GET' && response.status === 200) {
           const responseToCache = response.clone();
           caches.open(CACHE_NAME).then((cache) => {
@@ -66,7 +68,10 @@ self.addEventListener('fetch', (event) => {
           });
         }
         return response;
-      });
-    })
+      })
+      .catch(() => {
+        // Bei Netzwerkfehler: Versuche aus Cache
+        return caches.match(event.request);
+      })
   );
 });

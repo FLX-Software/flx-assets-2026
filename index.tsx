@@ -87,8 +87,27 @@ try {
 // Register Service Worker for PWA (basic implementation)
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').then(registration => {
+    navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' }).then(registration => {
       console.log('SW registered: ', registration);
+      
+      // Prüfe auf Updates
+      registration.addEventListener('updatefound', () => {
+        const newWorker = registration.installing;
+        if (newWorker) {
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              // Neuer Service Worker verfügbar - Seite neu laden
+              console.log('Neuer Service Worker verfügbar, lade Seite neu...');
+              window.location.reload();
+            }
+          });
+        }
+      });
+      
+      // Prüfe regelmäßig auf Updates
+      setInterval(() => {
+        registration.update();
+      }, 60000); // Alle 60 Sekunden
     }).catch(registrationError => {
       console.log('SW registration failed: ', registrationError);
     });
