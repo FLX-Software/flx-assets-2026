@@ -359,7 +359,7 @@ const App: React.FC = () => {
         )}
 
         {notification && (
-          <div className={`fixed top-24 right-4 left-4 z-50 p-4 rounded-xl shadow-2xl shadow-blue-500/20 transform transition-all border animate-in slide-in-from-top duration-300 ${notification.type === 'success' ? 'bg-emerald-600 border-emerald-400 text-white' : 'bg-rose-600 border-rose-400 text-white'}`}>
+          <div className={`fixed top-24 right-4 left-4 z-[100] p-4 rounded-xl shadow-2xl shadow-blue-500/20 transform transition-all border animate-in slide-in-from-top duration-300 ${notification.type === 'success' ? 'bg-emerald-600 border-emerald-400 text-white' : 'bg-rose-600 border-rose-400 text-white'}`}>
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-3 font-bold flex-1">
                 {notification.type === 'success' ? (
