@@ -93,9 +93,15 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
         try {
           console.log(`📤 Upload-Versuch ${retryCount + 1}/${maxRetries}...`);
           
-          const uploadPromise = uploadAssetImage(selectedFile, formData.id, organizationId);
+          // Erstelle AbortController für diesen Upload-Versuch
+          const abortController = new AbortController();
+          
+          const uploadPromise = uploadAssetImage(selectedFile, formData.id, organizationId, abortController.signal);
           const timeoutPromise = new Promise<{ url: null; error: string }>((resolve) => {
-            setTimeout(() => resolve({ url: null, error: 'Upload-Timeout: Das Bild konnte nicht innerhalb von 120 Sekunden hochgeladen werden' }), 120000); // 120 Sekunden Timeout
+            setTimeout(() => {
+              abortController.abort(); // Breche Upload ab bei Timeout
+              resolve({ url: null, error: 'Upload-Timeout: Das Bild konnte nicht innerhalb von 120 Sekunden hochgeladen werden' });
+            }, 120000); // 120 Sekunden Timeout
           });
           
           uploadResult = await Promise.race([uploadPromise, timeoutPromise]);

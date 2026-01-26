@@ -12,8 +12,11 @@ const BUCKET_NAME = 'asset-images';
 export async function uploadAssetImage(
   file: File,
   assetId: string,
-  organizationId: string
+  organizationId: string,
+  abortSignal?: AbortSignal
 ): Promise<{ url: string; error: null } | { url: null; error: string }> {
+  let heartbeatInterval: NodeJS.Timeout | null = null;
+  
   try {
     console.log('📤 uploadAssetImage gestartet', { fileName: file.name, size: file.size, assetId, organizationId });
     
@@ -46,14 +49,29 @@ export async function uploadAssetImage(
       });
 
     // Überwache den Upload mit einem Heartbeat
-    const heartbeatInterval = setInterval(() => {
+    heartbeatInterval = setInterval(() => {
+      if (abortSignal?.aborted) {
+        if (heartbeatInterval) clearInterval(heartbeatInterval);
+        return;
+      }
       const elapsed = Date.now() - uploadStartTime;
       console.log(`⏳ Upload läuft noch... (${Math.round(elapsed / 1000)}s)`);
     }, 10000); // Alle 10 Sekunden loggen
 
+    // Prüfe auf Abort-Signal
+    if (abortSignal?.aborted) {
+      if (heartbeatInterval) clearInterval(heartbeatInterval);
+      return { url: null, error: 'Upload abgebrochen' };
+    }
+
     try {
       const { data, error } = await uploadPromise;
-      clearInterval(heartbeatInterval);
+      if (heartbeatInterval) clearInterval(heartbeatInterval);
+      
+      // Prüfe erneut auf Abort nach dem Upload
+      if (abortSignal?.aborted) {
+        return { url: null, error: 'Upload abgebrochen' };
+      }
       
       const uploadDuration = Date.now() - uploadStartTime;
       console.log(`✅ Upload abgeschlossen in ${Math.round(uploadDuration / 1000)}s`);
@@ -63,7 +81,7 @@ export async function uploadAssetImage(
         return { url: null, error: error.message || 'Upload fehlgeschlagen' };
       }
     } catch (uploadError: any) {
-      clearInterval(heartbeatInterval);
+      if (heartbeatInterval) clearInterval(heartbeatInterval);
       console.error('❌ Upload-Exception:', uploadError);
       return { url: null, error: uploadError.message || 'Upload fehlgeschlagen' };
     }
@@ -83,6 +101,7 @@ export async function uploadAssetImage(
     console.log('✅ Upload komplett, URL:', urlData.publicUrl);
     return { url: urlData.publicUrl, error: null };
   } catch (error: any) {
+    if (heartbeatInterval) clearInterval(heartbeatInterval);
     console.error('❌ Unerwarteter Fehler beim Upload:', error);
     return { url: null, error: error.message || 'Upload fehlgeschlagen' };
   }
