@@ -234,14 +234,28 @@ const App: React.FC = () => {
   };
 
   const handleUpdateUsers = async (newUsers: User[]) => {
-    setUsers(newUsers);
-    if (currentUser) {
-      const stillExists = newUsers.find(u => u.id === currentUser.id);
-      if (!stillExists) {
-        handleLogout();
-      } else {
-        setCurrentUser(stillExists);
+    // Lade aktuelle Users aus Supabase neu
+    if (currentUser?.organizationId) {
+      try {
+        const updatedUsers = await fetchOrganizationMembers(currentUser.organizationId);
+        setUsers(updatedUsers);
+        
+        // Prüfe ob aktueller User noch existiert
+        if (currentUser) {
+          const stillExists = updatedUsers.find(u => u.id === currentUser.id);
+          if (!stillExists) {
+            handleLogout();
+          } else {
+            setCurrentUser(stillExists);
+          }
+        }
+      } catch (error: any) {
+        console.error('Fehler beim Aktualisieren der User-Liste:', error);
+        // Fallback: Verwende die übergebenen Users
+        setUsers(newUsers);
       }
+    } else {
+      setUsers(newUsers);
     }
   };
 
@@ -392,6 +406,7 @@ const App: React.FC = () => {
       {isUserMgmtOpen && (
         <UserManagementModal 
           users={users}
+          organizationId={currentUser.organizationId || ''}
           onClose={() => setIsUserMgmtOpen(false)}
           onUpdateUsers={handleUpdateUsers}
           onShowNotification={showNotification}

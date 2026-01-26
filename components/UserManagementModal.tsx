@@ -1,15 +1,18 @@
 
 import React, { useState } from 'react';
 import { User, UserRole } from '../types';
+import { signUp } from '../services/supabaseAuthService';
+import { removeMemberFromOrganization, updateMemberRole } from '../services/supabaseOrganizationService';
 
 interface UserManagementModalProps {
   users: User[];
+  organizationId: string;
   onClose: () => void;
   onUpdateUsers: (newUsers: User[]) => void;
   onShowNotification: (message: string, type: 'success' | 'error') => void;
 }
 
-const UserManagementModal: React.FC<UserManagementModalProps> = ({ users, onClose, onUpdateUsers, onShowNotification }) => {
+const UserManagementModal: React.FC<UserManagementModalProps> = ({ users, organizationId, onClose, onUpdateUsers, onShowNotification }) => {
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -21,6 +24,7 @@ const UserManagementModal: React.FC<UserManagementModalProps> = ({ users, onClos
   const [sendImmediately, setSendImmediately] = useState(true);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState<string | null>(null);
   const [isSending, setIsSending] = useState<string | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -45,57 +49,110 @@ const UserManagementModal: React.FC<UserManagementModalProps> = ({ users, onClos
     }, 1500);
   };
 
-  const handleAddUser = (e: React.FormEvent) => {
+  const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.username || !formData.firstName || !formData.lastName || !formData.password || !formData.email) {
+    if (!formData.firstName || !formData.lastName || !formData.password || !formData.email) {
       onShowNotification("Bitte füllen Sie alle Pflichtfelder inklusive E-Mail aus.", "error");
       return;
     }
 
-    const newUser: User = {
-      id: `u-${Date.now()}`,
-      firstName: formData.firstName,
-      lastName: formData.lastName,
-      name: `${formData.firstName} ${formData.lastName}`,
-      email: formData.email,
-      username: formData.username,
-      password: formData.password,
-      role: formData.role,
-    };
-
-    onUpdateUsers([...users, newUser]);
-    
-    if (sendImmediately) {
-      simulateEmailSend(newUser);
-    } else {
-      onShowNotification(`Benutzer ${newUser.name} wurde erfolgreich angelegt.`, 'success');
+    if (!organizationId) {
+      onShowNotification("Keine Organisation zugeordnet.", "error");
+      return;
     }
 
-    setFormData({
-      firstName: '',
-      lastName: '',
-      email: '',
-      username: '',
-      password: '',
-      role: UserRole.STAFF
-    });
-  };
+    setIsCreating(true);
+    try {
+      const fullName = `${formData.firstName} ${formData.lastName}`;
+      
+      // Erstelle User in Supabase Auth + Profil + Membership
+      const result = await signUp(
+        formData.email,
+        formData.password,
+        fullName,
+        organizationId,
+        formData.role
+      );
 
-  const handleDeleteUser = (id: string) => {
-    onUpdateUsers(users.filter(u => u.id !== id));
-    setIsConfirmingDelete(null);
-    onShowNotification(`Benutzer wurde gelöscht.`, 'success');
-  };
-
-  const handleToggleRole = (id: string) => {
-    const updatedUsers = users.map(u => {
-      if (u.id === id) {
-        const newRole = u.role === UserRole.ADMIN ? UserRole.STAFF : UserRole.ADMIN;
-        return { ...u, role: newRole };
+      if (!result.success || !result.user) {
+        onShowNotification(result.error || 'Fehler beim Erstellen des Benutzers.', 'error');
+        setIsCreating(false);
+        return;
       }
-      return u;
-    });
-    onUpdateUsers(updatedUsers);
+
+      // User zur Liste hinzufügen
+      onUpdateUsers([...users, result.user]);
+      
+      if (sendImmediately) {
+        simulateEmailSend(result.user);
+      } else {
+        onShowNotification(`Benutzer ${result.user.name} wurde erfolgreich angelegt.`, 'success');
+      }
+
+      setFormData({
+        firstName: '',
+        lastName: '',
+        email: '',
+        username: '',
+        password: '',
+        role: UserRole.STAFF
+      });
+    } catch (error: any) {
+      console.error('Fehler beim Erstellen des Benutzers:', error);
+      onShowNotification(error.message || 'Fehler beim Erstellen des Benutzers.', 'error');
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  const handleDeleteUser = async (id: string) => {
+    if (!organizationId) {
+      onShowNotification("Keine Organisation zugeordnet.", "error");
+      return;
+    }
+
+    try {
+      // Entferne User aus Organisation (soft delete)
+      await removeMemberFromOrganization(organizationId, id);
+      
+      // Aktualisiere lokale Liste
+      onUpdateUsers(users.filter(u => u.id !== id));
+      setIsConfirmingDelete(null);
+      onShowNotification(`Benutzer wurde entfernt.`, 'success');
+    } catch (error: any) {
+      console.error('Fehler beim Löschen des Benutzers:', error);
+      onShowNotification(error.message || 'Fehler beim Löschen des Benutzers.', 'error');
+    }
+  };
+
+  const handleToggleRole = async (id: string) => {
+    if (!organizationId) {
+      onShowNotification("Keine Organisation zugeordnet.", "error");
+      return;
+    }
+
+    const user = users.find(u => u.id === id);
+    if (!user) return;
+
+    const newRole = user.role === UserRole.ADMIN ? UserRole.STAFF : UserRole.ADMIN;
+
+    try {
+      // Aktualisiere Rolle in Supabase
+      await updateMemberRole(organizationId, id, newRole);
+      
+      // Aktualisiere lokale Liste
+      const updatedUsers = users.map(u => {
+        if (u.id === id) {
+          return { ...u, role: newRole };
+        }
+        return u;
+      });
+      onUpdateUsers(updatedUsers);
+      onShowNotification(`Rolle von ${user.name} wurde auf ${newRole === UserRole.ADMIN ? 'Admin' : 'Mitarbeiter'} geändert.`, 'success');
+    } catch (error: any) {
+      console.error('Fehler beim Ändern der Rolle:', error);
+      onShowNotification(error.message || 'Fehler beim Ändern der Rolle.', 'error');
+    }
   };
 
   return (
@@ -197,9 +254,20 @@ const UserManagementModal: React.FC<UserManagementModalProps> = ({ users, onClos
                   </label>
                   <button 
                     type="submit"
-                    className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-2xl uppercase text-[11px] tracking-widest italic shadow-xl shadow-blue-600/20 transition-all border-2 border-white/10"
+                    disabled={isCreating}
+                    className="w-full py-4 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-600 text-white font-black rounded-2xl uppercase text-[11px] tracking-widest italic shadow-xl shadow-blue-600/20 transition-all border-2 border-white/10 disabled:opacity-50 flex items-center justify-center gap-2"
                   >
-                    Benutzer anlegen
+                    {isCreating ? (
+                      <>
+                        <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Erstelle...
+                      </>
+                    ) : (
+                      'Benutzer anlegen'
+                    )}
                   </button>
                 </div>
               </div>

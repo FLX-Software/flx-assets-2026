@@ -1,6 +1,6 @@
 
-import React from 'react';
-import { Asset, User } from '../types';
+import React, { useState, useMemo } from 'react';
+import { Asset, User, AssetType } from '../types';
 import AssetCard from './AssetCard';
 
 interface StaffDashboardProps {
@@ -11,8 +11,49 @@ interface StaffDashboardProps {
   onShowDetails: (asset: Asset) => void;
 }
 
+type StaffSortOption = 'name-asc' | 'name-desc' | 'condition-asc' | 'condition-desc';
+
 const StaffDashboard: React.FC<StaffDashboardProps> = ({ assets, currentUser, onReturnAsset, onStartScan, onShowDetails }) => {
-  const myAssets = assets.filter(a => a.currentUserId === currentUser.id);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterCondition, setFilterCondition] = useState<number | 'ALL'>('ALL');
+  const [sortBy, setSortBy] = useState<StaffSortOption>('name-asc');
+
+  const myAssets = useMemo(() => {
+    let filtered = assets.filter(a => a.currentUserId === currentUser.id);
+    
+    // Volltextsuche (Marke, Modell, QR-Code)
+    if (searchQuery) {
+      const searchLower = searchQuery.toLowerCase();
+      filtered = filtered.filter(a => 
+        a.brand.toLowerCase().includes(searchLower) ||
+        a.model.toLowerCase().includes(searchLower) ||
+        a.qrCode.toLowerCase().includes(searchLower)
+      );
+    }
+    
+    // Zustand-Filter
+    if (filterCondition !== 'ALL') {
+      filtered = filtered.filter(a => a.condition === filterCondition);
+    }
+    
+    // Sortierung
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'name-asc':
+          return (a.brand + ' ' + a.model).localeCompare(b.brand + ' ' + b.model);
+        case 'name-desc':
+          return (b.brand + ' ' + b.model).localeCompare(a.brand + ' ' + a.model);
+        case 'condition-asc':
+          return a.condition - b.condition;
+        case 'condition-desc':
+          return b.condition - a.condition;
+        default:
+          return 0;
+      }
+    });
+    
+    return filtered;
+  }, [assets, currentUser.id, searchQuery, filterCondition, sortBy]);
 
   return (
     <div className="p-4 md:p-6 lg:p-8 pb-24">
@@ -43,6 +84,59 @@ const StaffDashboard: React.FC<StaffDashboardProps> = ({ assets, currentUser, on
             </span>
           )}
         </div>
+
+        {/* Suche & Filter für Mitarbeiter */}
+        {assets.filter(a => a.currentUserId === currentUser.id).length > 0 && (
+          <div className="bg-white dark:bg-[#0d1117] p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 mb-6">
+            <div className="flex flex-col md:flex-row gap-4">
+              {/* Volltextsuche */}
+              <div className="flex-1">
+                <div className="relative">
+                  <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                  <input 
+                    type="text" 
+                    placeholder="Marke, Modell oder QR-Code suchen..." 
+                    className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 pl-10 pr-4 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm font-medium dark:text-white"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
+              </div>
+              
+              {/* Filter */}
+              <div className="flex gap-3">
+                <div className="w-40">
+                  <select 
+                    className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 px-3 py-2.5 rounded-lg appearance-none cursor-pointer focus:border-blue-500 outline-none text-sm font-bold dark:text-white"
+                    value={filterCondition}
+                    onChange={(e) => setFilterCondition(e.target.value === 'ALL' ? 'ALL' : parseInt(e.target.value))}
+                  >
+                    <option value="ALL">Alle Zustände</option>
+                    <option value="5">Sehr gut (5)</option>
+                    <option value="4">Gut (4)</option>
+                    <option value="3">Befriedigend (3)</option>
+                    <option value="2">Ausreichend (2)</option>
+                    <option value="1">Mangelhaft (1)</option>
+                  </select>
+                </div>
+                <div className="w-36">
+                  <select 
+                    className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 px-3 py-2.5 rounded-lg appearance-none cursor-pointer focus:border-blue-500 outline-none text-sm font-bold dark:text-white"
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as StaffSortOption)}
+                  >
+                    <option value="name-asc">Name A-Z</option>
+                    <option value="name-desc">Name Z-A</option>
+                    <option value="condition-desc">Bester Zustand</option>
+                    <option value="condition-asc">Schlechtester Zustand</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
           {myAssets.length > 0 ? (
