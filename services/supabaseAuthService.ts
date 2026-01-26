@@ -55,7 +55,7 @@ export async function signUp(
     // 2. Profil wird automatisch vom Trigger erstellt (create-profile-trigger.sql)
     // Warte kurz, damit der Trigger das Profil erstellt hat
     console.log('🔵 signUp: Warte auf automatische Profil-Erstellung durch Trigger...');
-    await new Promise(resolve => setTimeout(resolve, 1500)); // 1.5 Sekunden warten
+    await new Promise(resolve => setTimeout(resolve, 500)); // 500ms warten (reduziert von 1.5s)
 
     // Versuche Profil zu erstellen - verwende SQL-Funktion um RLS zu umgehen
     console.log('🔵 signUp: Erstelle/aktualisiere Profil über SQL-Funktion...');
@@ -64,10 +64,23 @@ export async function signUp(
     const lastName = nameParts.slice(1).join(' ') || '';
 
     // Verwende SQL-Funktion create_profile_for_user (SECURITY DEFINER, umgeht RLS)
-    const { error: profileError } = await supabase.rpc('create_profile_for_user', {
+    // Mit Timeout: max. 5 Sekunden
+    const profilePromise = supabase.rpc('create_profile_for_user', {
       user_id: userId,
       full_name: fullName
     });
+
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Profil-Erstellung hat zu lange gedauert (Timeout)')), 5000)
+    );
+
+    let profileError = null;
+    try {
+      const result = await Promise.race([profilePromise, timeoutPromise]);
+      profileError = (result as any).error || null;
+    } catch (error: any) {
+      profileError = error;
+    }
 
     if (profileError) {
       console.error('❌ signUp: Profil-Erstellung fehlgeschlagen:', profileError);
