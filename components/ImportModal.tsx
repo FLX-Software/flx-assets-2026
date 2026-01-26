@@ -67,8 +67,13 @@ const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImportComplete, or
     let failedCount = 0;
 
     // Importiere Batches sequenziell mit Bulk-Insert
+    console.log(`🚀 Starte Import von ${batches.length} Batches (${importResult.validAssets.length} Assets total)`);
+    
     for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
       const batch = batches[batchIndex];
+      const batchStartTime = Date.now();
+      
+      console.log(`📦 Batch ${batchIndex + 1}/${batches.length}: Starte Import von ${batch.length} Assets...`);
       
       try {
         // Füge organizationId zu allen Assets hinzu
@@ -77,8 +82,19 @@ const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImportComplete, or
           organizationId,
         }));
         
-        // Bulk-Insert für diesen Batch
-        const result = await createAssetsBulk(assetsWithOrg, organizationId);
+        // Timeout für Bulk-Insert (30 Sekunden pro Batch)
+        const bulkInsertPromise = createAssetsBulk(assetsWithOrg, organizationId);
+        const timeoutPromise = new Promise<{ success: Asset[]; failed: Array<{ asset: Asset; error: string }> }>((_, reject) => {
+          setTimeout(() => reject(new Error('Bulk-Insert Timeout (30s)')), 30000);
+        });
+        
+        const result = await Promise.race([bulkInsertPromise, timeoutPromise]);
+        
+        const batchDuration = Date.now() - batchStartTime;
+        console.log(`✅ Batch ${batchIndex + 1}/${batches.length} abgeschlossen in ${batchDuration}ms`, {
+          success: result.success.length,
+          failed: result.failed.length
+        });
         
         successCount += result.success.length;
         failedCount += result.failed.length;
@@ -98,18 +114,24 @@ const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImportComplete, or
           });
         }
       } catch (error: any) {
-        console.error(`❌ Batch ${batchIndex + 1} fehlgeschlagen:`, error);
+        const batchDuration = Date.now() - batchStartTime;
+        console.error(`❌ Batch ${batchIndex + 1}/${batches.length} fehlgeschlagen nach ${batchDuration}ms:`, error);
+        
         // Fallback: Versuche Assets einzeln zu erstellen
-        for (const asset of batch) {
+        console.log(`🔄 Fallback: Versuche Assets aus Batch ${batchIndex + 1} einzeln zu importieren...`);
+        for (let assetIndex = 0; assetIndex < batch.length; assetIndex++) {
+          const asset = batch[assetIndex];
           try {
+            console.log(`  📝 Importiere Asset ${assetIndex + 1}/${batch.length}: ${asset.brand} ${asset.model}...`);
             const assetWithOrg: Asset = {
               ...asset,
               organizationId,
             };
             await createAsset(assetWithOrg, organizationId);
             successCount++;
+            console.log(`  ✅ Asset ${assetIndex + 1}/${batch.length} erfolgreich`);
           } catch (singleError: any) {
-            console.error('Fehler beim Importieren des Assets:', singleError);
+            console.error(`  ❌ Asset ${assetIndex + 1}/${batch.length} fehlgeschlagen:`, singleError);
             failedCount++;
           } finally {
             setImportProgress(prev => ({ ...prev, current: prev.current + 1 }));
@@ -120,9 +142,12 @@ const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImportComplete, or
       
       // Kurze Pause zwischen Batches, um Rate-Limiting zu vermeiden
       if (batchIndex < batches.length - 1) {
+        console.log(`⏸️  Pause 200ms vor nächstem Batch...`);
         await new Promise(resolve => setTimeout(resolve, 200)); // 200ms Pause
       }
     }
+    
+    console.log(`🎉 Import abgeschlossen! Erfolgreich: ${successCount}, Fehler: ${failedCount}`);
 
     setStep('complete');
     setIsImporting(false);

@@ -76,47 +76,86 @@ export async function createAsset(asset: Asset, organizationId: string): Promise
  * Erstellt mehrere Assets auf einmal (Bulk-Insert für bessere Performance)
  */
 export async function createAssetsBulk(assets: Asset[], organizationId: string): Promise<{ success: Asset[]; failed: Array<{ asset: Asset; error: string }> }> {
+  const startTime = Date.now();
   console.log('💾 createAssetsBulk gestartet', { count: assets.length, organizationId });
   
-  const dbAssets = assets.map(asset => assetToDBAsset(asset, organizationId));
-  
-  const { data, error } = await supabase
-    .from('assets')
-    .insert(dbAssets)
-    .select();
+  try {
+    console.log('🔄 Konvertiere Assets zu DB-Format...');
+    const dbAssets = assets.map(asset => assetToDBAsset(asset, organizationId));
+    console.log('✅ Konvertierung abgeschlossen', { dbAssetsCount: dbAssets.length });
+    
+    console.log('📤 Sende Bulk-Insert Request an Supabase...');
+    const insertStartTime = Date.now();
+    
+    const { data, error } = await supabase
+      .from('assets')
+      .insert(dbAssets)
+      .select();
 
-  if (error) {
-    console.error('❌ Fehler beim Bulk-Insert:', error);
-    // Falls Bulk-Insert fehlschlägt, versuche Assets einzeln zu erstellen
-    const results: { success: Asset[]; failed: Array<{ asset: Asset; error: string }> } = {
-      success: [],
+    const insertDuration = Date.now() - insertStartTime;
+    console.log(`📥 Supabase Response erhalten nach ${insertDuration}ms`, { 
+      hasData: !!data, 
+      dataLength: data?.length || 0, 
+      hasError: !!error 
+    });
+
+    if (error) {
+      console.error('❌ Fehler beim Bulk-Insert:', error);
+      console.log('🔄 Fallback: Versuche Assets einzeln zu erstellen...');
+      
+      // Falls Bulk-Insert fehlschlägt, versuche Assets einzeln zu erstellen
+      const results: { success: Asset[]; failed: Array<{ asset: Asset; error: string }> } = {
+        success: [],
+        failed: []
+      };
+      
+      for (let i = 0; i < assets.length; i++) {
+        const asset = assets[i];
+        try {
+          console.log(`  📝 Erstelle Asset ${i + 1}/${assets.length}: ${asset.brand} ${asset.model}...`);
+          const created = await createAsset(asset, organizationId);
+          results.success.push(created);
+          console.log(`  ✅ Asset ${i + 1}/${assets.length} erfolgreich`);
+        } catch (err: any) {
+          console.error(`  ❌ Asset ${i + 1}/${assets.length} fehlgeschlagen:`, err);
+          results.failed.push({ asset, error: err.message || 'Unbekannter Fehler' });
+        }
+      }
+      
+      const totalDuration = Date.now() - startTime;
+      console.log(`💾 createAssetsBulk abgeschlossen (Fallback) nach ${totalDuration}ms`, {
+        success: results.success.length,
+        failed: results.failed.length
+      });
+      
+      return results;
+    }
+
+    if (!data || data.length === 0) {
+      console.error('❌ Keine Assets zurückgegeben');
+      const totalDuration = Date.now() - startTime;
+      console.log(`💾 createAssetsBulk abgeschlossen nach ${totalDuration}ms (keine Daten)`);
+      return { success: [], failed: assets.map(a => ({ asset: a, error: 'Keine Daten zurückgegeben' })) };
+    }
+
+    console.log('🔄 Konvertiere DB-Assets zurück zu Asset-Format...');
+    const successAssets = data.map(dbAsset => dbAssetToAsset(dbAsset, []));
+    
+    const totalDuration = Date.now() - startTime;
+    console.log('✅ Bulk-Insert erfolgreich', { 
+      count: successAssets.length,
+      duration: `${totalDuration}ms`
+    });
+    
+    return {
+      success: successAssets,
       failed: []
     };
-    
-    for (const asset of assets) {
-      try {
-        const created = await createAsset(asset, organizationId);
-        results.success.push(created);
-      } catch (err: any) {
-        results.failed.push({ asset, error: err.message || 'Unbekannter Fehler' });
-      }
-    }
-    
-    return results;
+  } catch (error: any) {
+    const totalDuration = Date.now() - startTime;
+    console.error(`❌ Unerwarteter Fehler in createAssetsBulk nach ${totalDuration}ms:`, error);
+    throw error;
   }
-
-  if (!data || data.length === 0) {
-    console.error('❌ Keine Assets zurückgegeben');
-    return { success: [], failed: assets.map(a => ({ asset: a, error: 'Keine Daten zurückgegeben' })) };
-  }
-
-  const successAssets = data.map(dbAsset => dbAssetToAsset(dbAsset, []));
-  console.log('✅ Bulk-Insert erfolgreich', { count: successAssets.length });
-  
-  return {
-    success: successAssets,
-    failed: []
-  };
 }
 
 /**
