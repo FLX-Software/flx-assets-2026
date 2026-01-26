@@ -28,6 +28,7 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [infoSubTab, setInfoSubTab] = useState<'basic' | 'general' | 'vehicle' | 'machine' | 'tool' | 'financial'>('basic');
+  const [imageUpdateKey, setImageUpdateKey] = useState(0); // Key für Bild-Neuladen
 
   // Aktualisiere formData wenn asset-Prop sich ändert (z.B. nach onSave)
   useEffect(() => {
@@ -142,17 +143,22 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
 
       // Aktualisiere Asset mit neuer Bild-URL
       const updatedAsset = { ...formData, imageUrl: finalImageUrl };
+      
+      // Aktualisiere formData SOFORT, damit die Vorschau sofort das neue Bild anzeigt
       setFormData(updatedAsset);
       setSelectedFile(null);
+      
+      // Aktualisiere Image-Key, um React zu zwingen, das Bild neu zu laden
+      setImageUpdateKey(prev => prev + 1);
       
       // Speichere Asset
       console.log('💾 Speichere Asset mit neuem Bild...');
       await onSave(updatedAsset);
       console.log('✅ Asset gespeichert');
       
-      // Aktualisiere das Asset-Prop, damit die UI sofort das neue Bild anzeigt
-      // (onSave sollte das Asset aktualisieren, aber zur Sicherheit aktualisieren wir auch formData)
-      setFormData(updatedAsset);
+      // Stelle sicher, dass formData mit der finalen URL aktualisiert ist und Key aktualisiert wird
+      setFormData(prev => ({ ...prev, imageUrl: finalImageUrl }));
+      setImageUpdateKey(prev => prev + 1);
       
     } catch (error: any) {
       console.error('❌ Fehler beim Bild-Upload:', error);
@@ -334,7 +340,16 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
                             <div className="relative rounded-2xl overflow-hidden aspect-video shadow-inner bg-slate-100 dark:bg-slate-900 border-2 border-dashed border-slate-200 dark:border-slate-800">
                               {formData.imageUrl ? (
                                 <>
-                                  <img src={formData.imageUrl} alt={formData.model} className="w-full h-full object-cover" />
+                                  <img 
+                                    key={`edit-${imageUpdateKey}-${formData.imageUrl}`}
+                                    src={formData.imageUrl + (formData.imageUrl.includes('supabase.co') ? `?t=${Date.now()}` : '')} 
+                                    alt={formData.model} 
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                      console.warn('⚠️ Bild konnte nicht geladen werden:', formData.imageUrl);
+                                      (e.target as HTMLImageElement).style.display = 'none';
+                                    }}
+                                  />
                                   <div onClick={() => fileInputRef.current?.click()} className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center cursor-pointer opacity-0 hover:opacity-100 transition-opacity">
                                     <svg className="w-10 h-10 text-white mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                                     <span className="text-white text-[10px] font-black uppercase tracking-widest">Bild ändern</span>
@@ -457,7 +472,16 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
                           <div className="relative rounded-2xl overflow-hidden aspect-video shadow-inner bg-slate-100 dark:bg-slate-900 border-2 border-dashed border-slate-200 dark:border-slate-800">
                             {formData.imageUrl ? (
                               <>
-                                <img src={formData.imageUrl} alt={formData.model} className="w-full h-full object-cover" />
+                                <img 
+                                  key={`readonly-${imageUpdateKey}-${formData.imageUrl}`}
+                                  src={formData.imageUrl + (formData.imageUrl.includes('supabase.co') ? `?t=${Date.now()}` : '')} 
+                                  alt={formData.model} 
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    console.warn('⚠️ Bild konnte nicht geladen werden:', formData.imageUrl);
+                                    (e.target as HTMLImageElement).style.display = 'none';
+                                  }}
+                                />
                                 {editMode && (
                                   <div onClick={() => fileInputRef.current?.click()} className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center cursor-pointer opacity-0 hover:opacity-100 transition-opacity">
                                     <svg className="w-10 h-10 text-white mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
