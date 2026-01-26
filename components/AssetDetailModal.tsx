@@ -278,11 +278,13 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
                 </div>
               )}
 
-              <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Tab: Basis */}
-                {(infoSubTab === 'basic' || editMode) && (
-                  <div className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Tab: Basis - nur im Edit-Mode oder wenn Basis-Tab aktiv */}
+              {(infoSubTab === 'basic' || editMode) && (
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  {/* Tab: Basis - Read-Only Ansicht */}
+                  {infoSubTab === 'basic' && !editMode && (
+                    <div className="space-y-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-4">
                         <div>
                           <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Asset Foto</label>
@@ -320,7 +322,6 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
                       </div>
 
                       <div className="space-y-4">
-
                         <div className="grid grid-cols-2 gap-4">
                           <div>
                             <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Marke</label>
@@ -406,10 +407,13 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
                         </div>
                       </div>
                     </div>
+                    </div>
                   )}
+                </form>
+              )}
 
-                {/* Tab: Allgemein */}
-                {!editMode && infoSubTab === 'general' && (
+              {/* Tab: Allgemein */}
+              {!editMode && infoSubTab === 'general' && (
                   <div className="space-y-6">
                     {formData.description && (
                       <div>
@@ -484,10 +488,10 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
                       </div>
                     )}
                   </div>
-                )}
+              )}
 
-                {/* Tab: Finanzen */}
-                {!editMode && infoSubTab === 'financial' && (
+              {/* Tab: Finanzen */}
+              {!editMode && infoSubTab === 'financial' && (
                   <div className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {formData.purchasePrice !== undefined && (
@@ -510,10 +514,10 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
                       </div>
                     )}
                   </div>
-                )}
+              )}
 
-                {/* Tab: Fahrzeug */}
-                {!editMode && infoSubTab === 'vehicle' && formData.type === AssetType.VEHICLE && (
+              {/* Tab: Fahrzeug */}
+              {!editMode && infoSubTab === 'vehicle' && formData.type === AssetType.VEHICLE && (
                   <div className="space-y-6">
                     <div className="p-4 bg-blue-50/50 dark:bg-blue-900/10 rounded-xl border border-blue-100 dark:border-blue-900/30">
                       <h3 className="text-sm font-black text-blue-600 dark:text-blue-400 uppercase italic tracking-tighter mb-4">Identifikation</h3>
@@ -632,10 +636,10 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
                       </div>
                     )}
                   </div>
-                )}
+              )}
 
-                {/* Tab: Maschine */}
-                {!editMode && infoSubTab === 'machine' && formData.type === AssetType.MACHINE && (
+              {/* Tab: Maschine */}
+              {!editMode && infoSubTab === 'machine' && formData.type === AssetType.MACHINE && (
                   <div className="space-y-6">
                     <div className="p-4 bg-blue-50/50 dark:bg-blue-900/10 rounded-xl border border-blue-100 dark:border-blue-900/30">
                       <h3 className="text-sm font-black text-blue-600 dark:text-blue-400 uppercase italic tracking-tighter mb-4">Identifikation</h3>
@@ -832,11 +836,12 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
                       </div>
                     )}
                   </div>
-                )}
+              )}
 
-                  {/* Edit Mode: Alle Felder bearbeitbar */}
-                  {editMode && (
-                    <div className="space-y-4 max-h-[60vh] overflow-y-auto custom-scrollbar">
+              {/* Edit Mode: Alle Felder bearbeitbar */}
+              {editMode && (
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  <div className="space-y-4 max-h-[60vh] overflow-y-auto custom-scrollbar">
                       {/* Allgemeine Felder */}
                       <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800">
                         <h4 className="text-xs font-black text-slate-700 dark:text-slate-300 uppercase italic tracking-tighter mb-3">Allgemein</h4>
@@ -1168,10 +1173,9 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
                           </p>
                         </div>
                       )}
-                    </div>
-                  )}
+                  </div>
                 </form>
-              </div>
+              )}
             </div>
           )}
 
