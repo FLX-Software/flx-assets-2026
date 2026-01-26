@@ -112,11 +112,12 @@ const AssetCreateModal: React.FC<AssetCreateModalProps> = ({ onClose, onSave, or
             }
             
             // Wenn es ein Timeout war, versuche es erneut
-            if (uploadResult.error.includes('Timeout')) {
+            if (uploadResult.error.includes('Timeout') || uploadResult.error.includes('Session')) {
               retryCount++;
               if (retryCount < maxRetries) {
-                console.log(`⏳ Timeout, versuche erneut in 2 Sekunden... (${retryCount}/${maxRetries})`);
-                await new Promise(resolve => setTimeout(resolve, 2000)); // 2 Sekunden warten vor Retry
+                const waitTime = retryCount * 3000; // Längere Pause bei jedem Retry (3s, 6s, 9s)
+                console.log(`⏳ ${uploadResult.error.includes('Session') ? 'Session-Problem' : 'Timeout'}, versuche erneut in ${waitTime/1000} Sekunden... (${retryCount}/${maxRetries})`);
+                await new Promise(resolve => setTimeout(resolve, waitTime));
                 continue;
               }
             } else {

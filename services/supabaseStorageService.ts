@@ -38,14 +38,31 @@ export async function uploadAssetImage(
 
     console.log('📤 Upload zu Supabase Storage...', { bucket: BUCKET_NAME, fileName, fileSize: file.size });
 
+    // Prüfe Auth-Session vor Upload
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      console.warn('⚠️ Keine aktive Session, versuche Session zu erneuern...');
+      const { data: { session: newSession }, error: refreshError } = await supabase.auth.refreshSession();
+      if (refreshError || !newSession) {
+        console.error('❌ Konnte Session nicht erneuern:', refreshError);
+        return { url: null, error: 'Keine gültige Session. Bitte melden Sie sich erneut an.' };
+      }
+      console.log('✅ Session erneuert');
+    }
+
     const uploadStartTime = Date.now();
     
     // Upload zu Supabase Storage mit Timeout-Überwachung
+    // Verwende eine neue File-Instanz um sicherzustellen, dass das File-Objekt frisch ist
+    const fileBlob = new Blob([file], { type: file.type });
+    const freshFile = new File([fileBlob], file.name, { type: file.type, lastModified: Date.now() });
+    
     const uploadPromise = supabase.storage
       .from(BUCKET_NAME)
-      .upload(fileName, file, {
+      .upload(fileName, freshFile, {
         cacheControl: '3600',
         upsert: false, // Nicht überschreiben, neue Datei erstellen
+        contentType: file.type, // Explizit Content-Type setzen
       });
 
     // Überwache den Upload mit einem Heartbeat
