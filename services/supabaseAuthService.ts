@@ -57,44 +57,23 @@ export async function signUp(
     console.log('🔵 signUp: Warte auf automatische Profil-Erstellung durch Trigger...');
     await new Promise(resolve => setTimeout(resolve, 1500)); // 1.5 Sekunden warten
 
-    // Versuche Profil zu erstellen - falls es bereits existiert (vom Trigger), ignorieren wir den Fehler
-    console.log('🔵 signUp: Erstelle/aktualisiere Profil...');
+    // Versuche Profil zu erstellen - verwende SQL-Funktion um RLS zu umgehen
+    console.log('🔵 signUp: Erstelle/aktualisiere Profil über SQL-Funktion...');
     const nameParts = fullName.split(' ');
     const firstName = nameParts[0] || '';
     const lastName = nameParts.slice(1).join(' ') || '';
 
-    // Versuche Profil zu erstellen (mit ON CONFLICT würde es in SQL funktionieren, aber hier müssen wir es anders machen)
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .upsert({
-        id: userId,
-        full_name: fullName,
-      }, {
-        onConflict: 'id'
-      });
+    // Verwende SQL-Funktion create_profile_for_user (SECURITY DEFINER, umgeht RLS)
+    const { error: profileError } = await supabase.rpc('create_profile_for_user', {
+      user_id: userId,
+      full_name: fullName
+    });
 
-    // Ignoriere Fehler wenn Profil bereits existiert (vom Trigger erstellt)
     if (profileError) {
-      // 23505 = unique_violation (Profil existiert bereits) - das ist OK!
-      // 409 = Conflict - das ist auch OK!
-      if (profileError.code === '23505' || 
-          profileError.code === 'PGRST116' || 
-          profileError.message.includes('duplicate') || 
-          profileError.message.includes('already exists') ||
-          profileError.message.includes('conflict')) {
-        console.log('✅ signUp: Profil existiert bereits (wurde vom Trigger erstellt), aktualisiere full_name...');
-        // Versuche full_name zu aktualisieren
-        await supabase
-          .from('profiles')
-          .update({ full_name: fullName })
-          .eq('id', userId);
-      } else {
-        console.error('❌ signUp: Profil-Erstellung fehlgeschlagen:', profileError);
-        return { success: false, error: `Profil konnte nicht erstellt werden: ${profileError.message}` };
-      }
-    } else {
-      console.log('✅ signUp: Profil erstellt/aktualisiert');
+      console.error('❌ signUp: Profil-Erstellung fehlgeschlagen:', profileError);
+      return { success: false, error: `Profil konnte nicht erstellt werden: ${profileError.message}` };
     }
+    console.log('✅ signUp: Profil erstellt/aktualisiert');
 
     // 3. Membership anlegen
     console.log('🔵 signUp: Erstelle Membership...', { organizationId, userId, role });
