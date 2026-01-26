@@ -136,14 +136,31 @@ const AssetCreateModal: React.FC<AssetCreateModalProps> = ({ onClose, onSave, or
         }
         
         if (uploadResult.error) {
-          console.error('❌ Upload-Fehler nach', maxRetries, 'Versuchen:', uploadResult.error);
-          alert(`Fehler beim Upload: ${uploadResult.error}`);
-          setIsUploading(false);
-          return;
+          console.warn('⚠️ Upload fehlgeschlagen nach', maxRetries, 'Versuchen:', uploadResult.error);
+          console.log('💾 Verwende Base64-Fallback: Speichere Bild direkt im Asset...');
+          
+          // Fallback: Verwende Base64-Daten-URL (bereits in formData.imageUrl vorhanden)
+          if (formData.imageUrl && formData.imageUrl.startsWith('data:')) {
+            imageUrl = formData.imageUrl;
+            console.log('✅ Base64-Bild wird verwendet (Größe:', Math.round(imageUrl.length / 1024), 'KB)');
+          } else {
+            // Konvertiere File zu Base64
+            const base64Promise = new Promise<string>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(reader.result as string);
+              reader.onerror = reject;
+              reader.readAsDataURL(selectedFile);
+            });
+            imageUrl = await base64Promise;
+            console.log('✅ Bild zu Base64 konvertiert (Größe:', Math.round(imageUrl.length / 1024), 'KB)');
+          }
+          
+          // Warnung anzeigen, aber fortfahren
+          alert(`Hinweis: Upload zu Supabase Storage fehlgeschlagen. Das Bild wird als Base64 direkt im Asset gespeichert. Dies kann die Datenbankgröße erhöhen.`);
+        } else {
+          console.log('✅ Upload erfolgreich:', uploadResult.url);
+          imageUrl = uploadResult.url;
         }
-        
-        console.log('✅ Upload erfolgreich:', uploadResult.url);
-        imageUrl = uploadResult.url;
       }
 
       const newAsset: Asset = {

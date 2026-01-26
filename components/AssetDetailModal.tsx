@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, lazy, Suspense } from 'react';
+import React, { useState, useRef, useEffect, lazy, Suspense } from 'react';
 import { Asset, AssetType, AssetTypeLabels, LoanRecord, RepairEntry, UserRole } from '../types';
 import MaintenanceTimeline from './MaintenanceTimeline';
 import { createMaintenanceEvent, updateMaintenanceEvent, deleteMaintenanceEvent } from '../services/supabaseAssetService';
@@ -28,6 +28,13 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [infoSubTab, setInfoSubTab] = useState<'basic' | 'general' | 'vehicle' | 'machine' | 'tool' | 'financial'>('basic');
+
+  // Aktualisiere formData wenn asset-Prop sich ändert (z.B. nach onSave)
+  useEffect(() => {
+    if (asset.id === formData.id) {
+      setFormData({ ...asset });
+    }
+  }, [asset.id, asset.imageUrl]); // Nur bei Änderung der ID oder imageUrl aktualisieren
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
@@ -135,17 +142,37 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
         }
       }
       
+      let finalImageUrl: string;
+      
       if (uploadResult.error) {
-        console.error('❌ Upload-Fehler nach', maxRetries, 'Versuchen:', uploadResult.error);
-        alert(`Fehler beim Upload: ${uploadResult.error}`);
-        setIsUploadingImage(false);
-        return;
+        console.warn('⚠️ Upload fehlgeschlagen nach', maxRetries, 'Versuchen:', uploadResult.error);
+        console.log('💾 Verwende Base64-Fallback: Speichere Bild direkt im Asset...');
+        
+        // Fallback: Verwende Base64-Daten-URL (bereits in formData.imageUrl vorhanden)
+        if (formData.imageUrl && formData.imageUrl.startsWith('data:')) {
+          finalImageUrl = formData.imageUrl;
+          console.log('✅ Base64-Bild wird verwendet (Größe:', Math.round(finalImageUrl.length / 1024), 'KB)');
+        } else {
+          // Konvertiere File zu Base64
+          const base64Promise = new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(selectedFile);
+          });
+          finalImageUrl = await base64Promise;
+          console.log('✅ Bild zu Base64 konvertiert (Größe:', Math.round(finalImageUrl.length / 1024), 'KB)');
+        }
+        
+        // Warnung anzeigen, aber fortfahren
+        alert(`Hinweis: Upload zu Supabase Storage fehlgeschlagen. Das Bild wird als Base64 direkt im Asset gespeichert. Dies kann die Datenbankgröße erhöhen.`);
+      } else {
+        console.log('✅ Upload erfolgreich:', uploadResult.url);
+        finalImageUrl = uploadResult.url;
       }
 
-      console.log('✅ Upload erfolgreich:', uploadResult.url);
-
       // Aktualisiere Asset mit neuer Bild-URL
-      const updatedAsset = { ...formData, imageUrl: uploadResult.url };
+      const updatedAsset = { ...formData, imageUrl: finalImageUrl };
       setFormData(updatedAsset);
       setSelectedFile(null);
       
@@ -153,6 +180,10 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
       console.log('💾 Speichere Asset mit neuem Bild...');
       await onSave(updatedAsset);
       console.log('✅ Asset gespeichert');
+      
+      // Aktualisiere das Asset-Prop, damit die UI sofort das neue Bild anzeigt
+      // (onSave sollte das Asset aktualisieren, aber zur Sicherheit aktualisieren wir auch formData)
+      setFormData(updatedAsset);
       
     } catch (error: any) {
       console.error('❌ Fehler beim Bild-Upload:', error);
