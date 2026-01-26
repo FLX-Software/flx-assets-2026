@@ -205,7 +205,9 @@ export async function signUp(
 
     // 3. Membership anlegen
     console.log('🔵 signUp: Erstelle Membership...', { organizationId, userId, role });
-    const { error: memberError } = await supabase
+    
+    // Membership-Erstellung mit Timeout
+    const memberPromise = supabase
       .from('organization_members')
       .insert({
         organization_id: organizationId,
@@ -213,6 +215,19 @@ export async function signUp(
         role,
         is_active: true,
       });
+
+    const memberTimeout = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Membership-Erstellung Timeout (5s)')), 5000)
+    );
+
+    let memberError = null;
+    try {
+      const memberResult = await Promise.race([memberPromise, memberTimeout]) as any;
+      memberError = memberResult?.error || null;
+    } catch (timeoutError: any) {
+      console.error('❌ signUp: Membership-Erstellung Timeout:', timeoutError.message);
+      return { success: false, error: `Membership konnte nicht erstellt werden: ${timeoutError.message}` };
+    }
 
     if (memberError) {
       console.error('❌ signUp: Membership-Erstellung fehlgeschlagen:', memberError);
