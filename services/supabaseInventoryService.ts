@@ -1,6 +1,6 @@
 import { Asset, User } from '../types';
-import { fetchAsset, updateAsset } from './supabaseAssetService';
-import { createLoan, findActiveLoan, returnLoan } from './supabaseLoanService';
+import { updateAsset } from './supabaseAssetService';
+import { createLoan, returnLoan } from './supabaseLoanService';
 import { supabase } from '../lib/supabaseClient';
 
 /**
