@@ -84,16 +84,52 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
         }
       }
 
-      // Lade neues Bild hoch mit Timeout
-      const uploadPromise = uploadAssetImage(selectedFile, formData.id, organizationId);
-      const timeoutPromise = new Promise<{ url: null; error: string }>((resolve) => {
-        setTimeout(() => resolve({ url: null, error: 'Upload-Timeout: Das Bild konnte nicht innerhalb von 30 Sekunden hochgeladen werden' }), 30000);
-      });
+      // Lade neues Bild hoch mit Timeout und Retry-Mechanismus
+      let uploadResult: { url: string; error: null } | { url: null; error: string };
+      const maxRetries = 3;
+      let retryCount = 0;
       
-      const uploadResult = await Promise.race([uploadPromise, timeoutPromise]);
+      while (retryCount < maxRetries) {
+        try {
+          console.log(`📤 Upload-Versuch ${retryCount + 1}/${maxRetries}...`);
+          
+          const uploadPromise = uploadAssetImage(selectedFile, formData.id, organizationId);
+          const timeoutPromise = new Promise<{ url: null; error: string }>((resolve) => {
+            setTimeout(() => resolve({ url: null, error: 'Upload-Timeout: Das Bild konnte nicht innerhalb von 60 Sekunden hochgeladen werden' }), 60000); // 60 Sekunden Timeout
+          });
+          
+          uploadResult = await Promise.race([uploadPromise, timeoutPromise]);
+          
+          if (!uploadResult.error) {
+            console.log('✅ Upload erfolgreich nach', retryCount + 1, 'Versuch(en)');
+            break; // Erfolgreich, beende Retry-Schleife
+          }
+          
+          // Wenn es ein Timeout war, versuche es erneut
+          if (uploadResult.error.includes('Timeout')) {
+            retryCount++;
+            if (retryCount < maxRetries) {
+              console.log(`⏳ Timeout, versuche erneut in 2 Sekunden... (${retryCount}/${maxRetries})`);
+              await new Promise(resolve => setTimeout(resolve, 2000)); // 2 Sekunden warten vor Retry
+              continue;
+            }
+          } else {
+            // Anderer Fehler, nicht retry
+            break;
+          }
+        } catch (error: any) {
+          retryCount++;
+          if (retryCount >= maxRetries) {
+            uploadResult = { url: null, error: error.message || 'Upload fehlgeschlagen nach mehreren Versuchen' };
+            break;
+          }
+          console.log(`⚠️ Fehler beim Upload, versuche erneut... (${retryCount}/${maxRetries})`);
+          await new Promise(resolve => setTimeout(resolve, 2000)); // 2 Sekunden warten vor Retry
+        }
+      }
       
       if (uploadResult.error) {
-        console.error('❌ Upload-Fehler:', uploadResult.error);
+        console.error('❌ Upload-Fehler nach', maxRetries, 'Versuchen:', uploadResult.error);
         alert(`Fehler beim Upload: ${uploadResult.error}`);
         setIsUploadingImage(false);
         return;
