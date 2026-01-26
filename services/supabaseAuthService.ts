@@ -20,11 +20,20 @@ export async function signUp(
   try {
     console.log('🔵 signUp: Starte User-Erstellung...', { email, organizationId, role });
     
-    // 0. Prüfe ob User bereits in auth.users existiert (z.B. nach Löschung)
-    // Falls ja, stelle ihn wieder her statt neu anzulegen
+    // 0. Passwort-Validierung VOR dem signUp
+    if (!password || password.length < 6) {
+      return {
+        success: false,
+        error: 'Das Passwort muss mindestens 6 Zeichen lang sein.'
+      };
+    }
+    
+    // 1. Prüfe ob User bereits in auth.users existiert (z.B. nach fehlgeschlagenem Versuch)
+    // Falls ja, versuche ihn wiederherzustellen oder zu löschen
     let userId: string | null = null;
     let wasRestored = false;
     let authData: any = null;
+    let userWasCreated = false; // Track ob User erstellt wurde (für Rollback)
     
     try {
       console.log('🔵 signUp: Prüfe ob User bereits existiert...');
@@ -166,17 +175,110 @@ export async function signUp(
             };
           }
         } else {
-          return { success: false, error: authError.message || 'Registrierung fehlgeschlagen' };
+          // Andere Fehler (z.B. Passwort zu kurz) - prüfe ob User trotzdem erstellt wurde
+          console.log('⚠️ signUp: Auth-Fehler, prüfe ob User trotzdem erstellt wurde...', authError.message);
+          
+          // Wenn Fehler "Password must be at least 6 characters" oder ähnlich,
+          // könnte der User trotzdem erstellt worden sein (je nach Supabase-Konfiguration)
+          // Versuche User wiederherzustellen (falls erstellt wurde)
+          if (authError.message?.includes('Password') || authError.message?.includes('password') || 
+              authError.message?.includes('at least 6') || authError.message?.includes('mindestens 6')) {
+            console.log('⚠️ signUp: Passwort-Fehler erkannt, prüfe ob User trotzdem erstellt wurde...');
+            
+            // Versuche User wiederherzustellen (falls erstellt wurde)
+            try {
+              const restorePromise3 = supabase.rpc('restore_user_if_exists', {
+                user_email: email,
+                full_name: fullName,
+                organization_id: organizationId,
+                user_role: role
+              });
+              
+              const restoreTimeout3 = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('restore_user_if_exists Timeout (5s)')), 5000)
+              );
+              
+              const restoreResult3 = await Promise.race([restorePromise3, restoreTimeout3]) as any;
+              const restoreData3 = restoreResult3?.data || null;
+              const restoreError3 = restoreResult3?.error || null;
+              
+              if (!restoreError3 && restoreData3) {
+                // User wurde gefunden und wiederhergestellt
+                userId = restoreData3;
+                wasRestored = true;
+                console.log('✅ signUp: User wurde trotz Passwort-Fehler erstellt und erfolgreich wiederhergestellt');
+                // Weiter mit Profil/Membership-Erstellung
+              } else if (restoreError3?.message?.includes('existiert bereits und ist aktiv')) {
+                return {
+                  success: false,
+                  error: 'Ein Benutzer mit dieser E-Mail-Adresse existiert bereits und ist aktiv. Bitte löschen Sie den Benutzer aus Supabase Auth (Authentication → Users), um ihn erneut anzulegen.'
+                };
+              } else {
+                // User wurde nicht erstellt oder konnte nicht wiederhergestellt werden
+                console.log('⚠️ signUp: User wurde nicht erstellt oder konnte nicht wiederhergestellt werden');
+                return {
+                  success: false,
+                  error: 'Das Passwort muss mindestens 6 Zeichen lang sein.'
+                };
+              }
+            } catch (restoreException3: any) {
+              console.warn('⚠️ signUp: Wiederherstellung nach Passwort-Fehler fehlgeschlagen:', restoreException3);
+              // Gebe klare Fehlermeldung zurück
+              return {
+                success: false,
+                error: 'Das Passwort muss mindestens 6 Zeichen lang sein. Falls der Benutzer bereits angelegt wurde, löschen Sie ihn bitte aus Supabase Auth (Authentication → Users) und versuchen Sie es erneut.'
+              };
+            }
+          } else {
+            // Andere Fehler (nicht Passwort-bezogen)
+            return { success: false, error: authError.message || 'Registrierung fehlgeschlagen' };
+          }
         }
       }
 
       if (!authData?.user) {
-        console.error('❌ signUp: Kein User-Objekt zurückgegeben');
-        return { success: false, error: 'Registrierung fehlgeschlagen: Kein User-Objekt erhalten' };
+        // Wenn kein User-Objekt zurückgegeben wurde, aber auch kein Fehler,
+        // könnte der User trotzdem erstellt worden sein (z.B. bei Passwort-Fehler)
+        // Versuche Wiederherstellung
+        if (!wasRestored) {
+          console.log('⚠️ signUp: Kein User-Objekt, aber auch kein Fehler - versuche Wiederherstellung...');
+          try {
+            const restorePromise4 = supabase.rpc('restore_user_if_exists', {
+              user_email: email,
+              full_name: fullName,
+              organization_id: organizationId,
+              user_role: role
+            });
+            
+            const restoreTimeout4 = new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('restore_user_if_exists Timeout (5s)')), 5000)
+            );
+            
+            const restoreResult4 = await Promise.race([restorePromise4, restoreTimeout4]) as any;
+            const restoreData4 = restoreResult4?.data || null;
+            const restoreError4 = restoreResult4?.error || null;
+            
+            if (!restoreError4 && restoreData4) {
+              userId = restoreData4;
+              wasRestored = true;
+              console.log('✅ signUp: User wurde gefunden und wiederhergestellt');
+            } else {
+              console.error('❌ signUp: Kein User-Objekt zurückgegeben und Wiederherstellung fehlgeschlagen');
+              return { success: false, error: 'Registrierung fehlgeschlagen: Kein User-Objekt erhalten' };
+            }
+          } catch (restoreException4: any) {
+            console.error('❌ signUp: Wiederherstellung fehlgeschlagen:', restoreException4);
+            return { success: false, error: 'Registrierung fehlgeschlagen: Kein User-Objekt erhalten' };
+          }
+        } else {
+          console.error('❌ signUp: Kein User-Objekt zurückgegeben');
+          return { success: false, error: 'Registrierung fehlgeschlagen: Kein User-Objekt erhalten' };
+        }
+      } else {
+        userId = authData.user.id;
+        userWasCreated = true; // Markiere dass User erstellt wurde
+        console.log('✅ signUp: Auth-User erstellt, ID:', userId);
       }
-
-      userId = authData.user.id;
-      console.log('✅ signUp: Auth-User erstellt, ID:', userId);
     }
 
     // 2. Profil und Membership erstellen (nur wenn User nicht wiederhergestellt wurde)

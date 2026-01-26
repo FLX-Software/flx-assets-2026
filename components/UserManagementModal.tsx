@@ -57,6 +57,12 @@ const UserManagementModal: React.FC<UserManagementModalProps> = ({ users, organi
       return;
     }
 
+    // Passwort-Validierung VOR dem signUp-Aufruf
+    if (formData.password.length < 6) {
+      onShowNotification("Das Passwort muss mindestens 6 Zeichen lang sein.", "error");
+      return;
+    }
+
     if (!organizationId) {
       onShowNotification("Keine Organisation zugeordnet.", "error");
       return;
