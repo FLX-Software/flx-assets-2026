@@ -84,60 +84,22 @@ const AssetCreateModal: React.FC<AssetCreateModalProps> = ({ onClose, onSave, or
       if (selectedFile) {
         console.log('📤 Starte Bild-Upload...', { fileName: selectedFile.name, size: selectedFile.size });
         
-        // Upload mit Retry-Mechanismus
-        let uploadResult: { url: string; error: null } | { url: null; error: string };
-        const maxRetries = 3;
-        let retryCount = 0;
+        // Optimierter Upload: Kurzer Timeout (10 Sekunden), dann sofort Base64-Fallback
+        console.log('📤 Versuche schnellen Upload zu Supabase Storage (10s Timeout)...');
         
-        while (retryCount < maxRetries) {
-          try {
-            console.log(`📤 Upload-Versuch ${retryCount + 1}/${maxRetries}...`);
-            
-            // Erstelle AbortController für diesen Upload-Versuch
-            const abortController = new AbortController();
-            
-            const uploadPromise = uploadAssetImage(selectedFile, assetId, organizationId, abortController.signal);
-            const timeoutPromise = new Promise<{ url: null; error: string }>((resolve) => {
-              setTimeout(() => {
-                abortController.abort(); // Breche Upload ab bei Timeout
-                resolve({ url: null, error: 'Upload-Timeout: Das Bild konnte nicht innerhalb von 120 Sekunden hochgeladen werden' });
-              }, 120000); // 120 Sekunden Timeout
-            });
-            
-            uploadResult = await Promise.race([uploadPromise, timeoutPromise]);
-            
-            if (!uploadResult.error) {
-              console.log('✅ Upload erfolgreich nach', retryCount + 1, 'Versuch(en)');
-              break; // Erfolgreich, beende Retry-Schleife
-            }
-            
-            // Wenn es ein Timeout war, versuche es erneut
-            if (uploadResult.error.includes('Timeout') || uploadResult.error.includes('Session')) {
-              retryCount++;
-              if (retryCount < maxRetries) {
-                const waitTime = retryCount * 3000; // Längere Pause bei jedem Retry (3s, 6s, 9s)
-                console.log(`⏳ ${uploadResult.error.includes('Session') ? 'Session-Problem' : 'Timeout'}, versuche erneut in ${waitTime/1000} Sekunden... (${retryCount}/${maxRetries})`);
-                await new Promise(resolve => setTimeout(resolve, waitTime));
-                continue;
-              }
-            } else {
-              // Anderer Fehler, nicht retry
-              break;
-            }
-          } catch (error: any) {
-            retryCount++;
-            if (retryCount >= maxRetries) {
-              uploadResult = { url: null, error: error.message || 'Upload fehlgeschlagen nach mehreren Versuchen' };
-              break;
-            }
-            console.log(`⚠️ Fehler beim Upload, versuche erneut... (${retryCount}/${maxRetries})`);
-            await new Promise(resolve => setTimeout(resolve, 2000)); // 2 Sekunden warten vor Retry
-          }
-        }
+        const abortController = new AbortController();
+        const uploadPromise = uploadAssetImage(selectedFile, assetId, organizationId, abortController.signal);
+        const timeoutPromise = new Promise<{ url: null; error: string }>((resolve) => {
+          setTimeout(() => {
+            abortController.abort();
+            resolve({ url: null, error: 'Upload-Timeout: Upload dauert zu lange, verwende Base64-Fallback' });
+          }, 10000); // Nur 10 Sekunden Timeout für schnelle Reaktion
+        });
+        
+        const uploadResult = await Promise.race([uploadPromise, timeoutPromise]);
         
         if (uploadResult.error) {
-          console.warn('⚠️ Upload fehlgeschlagen nach', maxRetries, 'Versuchen:', uploadResult.error);
-          console.log('💾 Verwende Base64-Fallback: Speichere Bild direkt im Asset...');
+          console.log('⏩ Upload zu langsam, verwende sofort Base64-Fallback für bessere Performance...');
           
           // Fallback: Verwende Base64-Daten-URL (bereits in formData.imageUrl vorhanden)
           if (formData.imageUrl && formData.imageUrl.startsWith('data:')) {
@@ -154,9 +116,6 @@ const AssetCreateModal: React.FC<AssetCreateModalProps> = ({ onClose, onSave, or
             imageUrl = await base64Promise;
             console.log('✅ Bild zu Base64 konvertiert (Größe:', Math.round(imageUrl.length / 1024), 'KB)');
           }
-          
-          // Warnung anzeigen, aber fortfahren
-          alert(`Hinweis: Upload zu Supabase Storage fehlgeschlagen. Das Bild wird als Base64 direkt im Asset gespeichert. Dies kann die Datenbankgröße erhöhen.`);
         } else {
           console.log('✅ Upload erfolgreich:', uploadResult.url);
           imageUrl = uploadResult.url;
