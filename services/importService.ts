@@ -320,6 +320,24 @@ export function validateAssetRow(
       if (!isNaN(num)) {
         asset.mileage = num;
       }
+    } else if (fieldName === 'status') {
+      // Status-Validierung: Nur 'available' oder 'loaned' erlaubt
+      const normalizedStatus = value.toLowerCase().trim();
+      if (normalizedStatus === 'available' || normalizedStatus === 'verfügbar' || normalizedStatus === 'lager' || normalizedStatus === 'frei') {
+        asset.status = 'available';
+      } else if (normalizedStatus === 'loaned' || normalizedStatus === 'ausgeliehen' || normalizedStatus === 'einsatz' || normalizedStatus === 'verliehen') {
+        asset.status = 'loaned';
+      } else if (value && value !== '-' && value !== 'N/A') {
+        // Ungültiger Status-Wert - Warnung und Standard setzen
+        warnings.push({
+          row: rowIndex + 2,
+          field: columnName,
+          message: `Ungültiger Status: "${value}". Verwende Standard "available". Erlaubt: available/verfügbar/lager oder loaned/ausgeliehen/einsatz`,
+          type: 'warning',
+        });
+        asset.status = 'available'; // Standard-Wert
+      }
+      // Wenn leer, wird später 'available' gesetzt
     } else {
       // Text-Feld
       if (value && value !== '-' && value !== 'N/A') {
@@ -371,8 +389,9 @@ export function validateAssetRow(
   if (!asset.type) {
     asset.type = AssetType.TOOL; // Fallback, aber sollte eigentlich gesetzt sein
   }
-  if (!asset.status) {
-    asset.status = 'available';
+  // Status: Immer sicherstellen, dass ein gültiger Wert gesetzt ist
+  if (!asset.status || (asset.status !== 'available' && asset.status !== 'loaned')) {
+    asset.status = 'available'; // Standard-Wert
   }
   if (asset.condition === undefined) {
     // Leer lassen
@@ -432,7 +451,7 @@ export async function validateCSVImport(
         imageUrl: 'https://picsum.photos/seed/newasset/400/300',
         qrCode: result.asset.qrCode || '',
         currentUserId: null,
-        status: result.asset.status || 'available', // Status muss gesetzt sein
+        status: (result.asset.status === 'available' || result.asset.status === 'loaned') ? result.asset.status : 'available', // Status muss gültig sein
         maintenanceIntervalMonths: result.asset.maintenanceIntervalMonths ?? 12, // Nur wenn undefined
         repairHistory: [],
         ...result.asset, // Überschreibt die obigen Werte wenn in result.asset vorhanden
