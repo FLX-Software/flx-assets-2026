@@ -27,12 +27,23 @@ export async function signUp(
     let authData: any = null;
     
     try {
-      const { data: restoreData, error: restoreError } = await supabase.rpc('restore_user_if_exists', {
+      console.log('🔵 signUp: Prüfe ob User bereits existiert...');
+      
+      // RPC-Aufruf mit Timeout
+      const restorePromise = supabase.rpc('restore_user_if_exists', {
         user_email: email,
         full_name: fullName,
         organization_id: organizationId,
         user_role: role
       });
+      
+      const restoreTimeout = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('restore_user_if_exists Timeout (3s)')), 3000)
+      );
+      
+      const restoreResult = await Promise.race([restorePromise, restoreTimeout]) as any;
+      const restoreData = restoreResult?.data || null;
+      const restoreError = restoreResult?.error || null;
       
       if (!restoreError && restoreData) {
         console.log('✅ signUp: User existiert bereits in auth.users, stelle wieder her...', restoreData);
@@ -40,23 +51,28 @@ export async function signUp(
         wasRestored = true;
         // Passwort kann nicht aktualisiert werden ohne Service Role, aber User kann sich mit altem Passwort einloggen
         // Oder: Admin muss Passwort manuell zurücksetzen
+      } else if (restoreError) {
+        // Wenn Fehler "User existiert bereits und ist aktiv", dann Fehler zurückgeben
+        if (restoreError.message?.includes('existiert bereits und ist aktiv')) {
+          return { 
+            success: false, 
+            error: 'Ein Benutzer mit dieser E-Mail-Adresse existiert bereits und ist aktiv.' 
+          };
+        }
+        // Andere Fehler ignorieren (z.B. Funktion existiert nicht), versuche normalen signUp
+        console.log('⚠️ signUp: restore_user_if_exists Fehler (ignoriert):', restoreError.message);
       }
     } catch (restoreException: any) {
-      // Wenn Fehler "User existiert bereits und ist aktiv", dann Fehler zurückgeben
-      if (restoreException.message?.includes('existiert bereits und ist aktiv')) {
-        return { 
-          success: false, 
-          error: 'Ein Benutzer mit dieser E-Mail-Adresse existiert bereits und ist aktiv.' 
-        };
-      }
-      // Andere Fehler ignorieren, versuche normalen signUp
-      console.log('⚠️ signUp: restore_user_if_exists fehlgeschlagen, versuche normalen signUp...', restoreException.message);
+      // Timeout oder anderer Fehler - ignoriere und versuche normalen signUp
+      console.log('⚠️ signUp: restore_user_if_exists fehlgeschlagen (ignoriert), versuche normalen signUp...', restoreException.message);
     }
     
     // 1. User in Supabase Auth anlegen (nur wenn nicht wiederhergestellt)
     if (!wasRestored) {
       console.log('🔵 signUp: Erstelle Auth-User...');
-      const authResult = await supabase.auth.signUp({
+      
+      // signUp mit Timeout
+      const signUpPromise = supabase.auth.signUp({
         email,
         password,
         options: {
@@ -66,6 +82,21 @@ export async function signUp(
           emailRedirectTo: undefined, // Keine E-Mail-Bestätigung erforderlich für Admin-Erstellung
         },
       });
+      
+      const signUpTimeout = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('signUp Timeout (10s)')), 10000)
+      );
+      
+      let authResult: any;
+      try {
+        authResult = await Promise.race([signUpPromise, signUpTimeout]);
+      } catch (timeoutError: any) {
+        console.error('❌ signUp: signUp Timeout:', timeoutError.message);
+        return { 
+          success: false, 
+          error: 'Die Benutzer-Erstellung dauert zu lange. Bitte versuchen Sie es erneut oder prüfen Sie Ihre Internetverbindung.' 
+        };
+      }
 
       authData = authResult.data;
       const authError = authResult.error;
