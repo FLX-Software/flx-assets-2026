@@ -70,21 +70,36 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
 
     try {
       setIsUploadingImage(true);
+      console.log('📤 Starte Bild-Upload...', { fileName: selectedFile.name, size: selectedFile.size, assetId: formData.id });
       
       // Lösche altes Bild (falls es von Supabase Storage ist)
       const oldImageUrl = asset.imageUrl;
       if (oldImageUrl && oldImageUrl.includes('supabase.co/storage')) {
-        await deleteAssetImage(oldImageUrl);
+        try {
+          await deleteAssetImage(oldImageUrl);
+          console.log('✅ Altes Bild gelöscht');
+        } catch (deleteError) {
+          console.warn('⚠️ Fehler beim Löschen des alten Bildes (fortsetzen):', deleteError);
+          // Weiter mit Upload auch wenn Löschen fehlschlägt
+        }
       }
 
-      // Lade neues Bild hoch
-      const uploadResult = await uploadAssetImage(selectedFile, formData.id, organizationId);
+      // Lade neues Bild hoch mit Timeout
+      const uploadPromise = uploadAssetImage(selectedFile, formData.id, organizationId);
+      const timeoutPromise = new Promise<{ url: null; error: string }>((resolve) => {
+        setTimeout(() => resolve({ url: null, error: 'Upload-Timeout: Das Bild konnte nicht innerhalb von 30 Sekunden hochgeladen werden' }), 30000);
+      });
+      
+      const uploadResult = await Promise.race([uploadPromise, timeoutPromise]);
       
       if (uploadResult.error) {
+        console.error('❌ Upload-Fehler:', uploadResult.error);
         alert(`Fehler beim Upload: ${uploadResult.error}`);
         setIsUploadingImage(false);
         return;
       }
+
+      console.log('✅ Upload erfolgreich:', uploadResult.url);
 
       // Aktualisiere Asset mit neuer Bild-URL
       const updatedAsset = { ...formData, imageUrl: uploadResult.url };
@@ -92,11 +107,13 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
       setSelectedFile(null);
       
       // Speichere Asset
+      console.log('💾 Speichere Asset mit neuem Bild...');
       await onSave(updatedAsset);
+      console.log('✅ Asset gespeichert');
       
     } catch (error: any) {
-      console.error('Fehler beim Bild-Upload:', error);
-      alert(`Fehler beim Upload: ${error.message}`);
+      console.error('❌ Fehler beim Bild-Upload:', error);
+      alert(`Fehler beim Upload: ${error.message || 'Unbekannter Fehler'}`);
     } finally {
       setIsUploadingImage(false);
     }
@@ -120,14 +137,21 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Wenn ein neues Bild ausgewählt wurde, lade es zuerst hoch
-    if (selectedFile && isAdmin) {
-      await handleImageUpload();
-    } else {
-      onSave(formData);
+    try {
+      // Wenn ein neues Bild ausgewählt wurde, lade es zuerst hoch
+      if (selectedFile && isAdmin) {
+        await handleImageUpload();
+      } else {
+        console.log('💾 Speichere Asset-Änderungen...', { assetId: formData.id });
+        await onSave(formData);
+        console.log('✅ Asset-Änderungen gespeichert');
+      }
+      
+      setEditMode(false);
+    } catch (error: any) {
+      console.error('❌ Fehler beim Speichern:', error);
+      alert(`Fehler beim Speichern: ${error.message || 'Unbekannter Fehler'}`);
     }
-    
-    setEditMode(false);
   };
 
   const assetHistory = history.filter(h => h.assetId === asset.id).sort((a, b) => 

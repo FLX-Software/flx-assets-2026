@@ -128,8 +128,12 @@ export async function updateAsset(
   organizationId: string, 
   loadMaintenanceEvents: boolean = true
 ): Promise<Asset> {
+  console.log('💾 updateAsset gestartet', { assetId: asset.id, brand: asset.brand, organizationId });
+  
   const dbAsset = assetToDBAsset(asset, organizationId);
   const { id, ...updateData } = dbAsset;
+  
+  console.log('💾 DB-Asset vorbereitet', { id, updateFields: Object.keys(updateData).length });
 
   const { data, error } = await supabase
     .from('assets')
@@ -139,9 +143,11 @@ export async function updateAsset(
     .single();
 
   if (error || !data) {
-    console.error('Fehler beim Aktualisieren des Assets:', error);
+    console.error('❌ Fehler beim Aktualisieren des Assets:', error);
     throw error || new Error('Asset konnte nicht aktualisiert werden');
   }
+
+  console.log('✅ Asset erfolgreich aktualisiert', { id: data.id });
 
   // Maintenance-Events nur laden, wenn explizit gewünscht (für Performance)
   const maintenanceEvents = loadMaintenanceEvents 
