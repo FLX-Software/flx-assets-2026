@@ -3,6 +3,8 @@
 -- ============================================================
 -- Dieses Script markiert einen bestehenden User als Super-Admin
 -- 
+-- WICHTIG: Führe ZUERST fix-organization-members-role-constraint.sql aus!
+-- 
 -- ANPASSUNG: Ersetze 'DEINE_USER_ID_HIER' mit der UUID des App-Inhabers
 -- ============================================================
 
