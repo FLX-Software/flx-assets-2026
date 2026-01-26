@@ -42,26 +42,62 @@ const App: React.FC = () => {
     setNotification({ message, type });
   };
 
+  // Funktion zum Laden der verfügbaren Organisationen
+  const loadAvailableOrganizations = async (user: User) => {
+    if (user.role === UserRole.SUPER_ADMIN) {
+      try {
+        // Super-Admin sieht alle Organisationen
+        const allOrgs = await fetchAllOrganizations();
+        setAvailableOrganizations(allOrgs);
+      } catch (error) {
+        console.error('Fehler beim Laden aller Organisationen:', error);
+        // Fallback: Lade nur User-Organisationen
+        try {
+          const userOrgs = await fetchUserOrganizations(user.id);
+          setAvailableOrganizations(userOrgs);
+        } catch (fallbackError) {
+          console.error('Fehler beim Fallback-Laden:', fallbackError);
+        }
+      }
+    } else {
+      try {
+        // Normale User: Nur Organisationen, in denen sie Mitglied sind
+        const userOrgs = await fetchUserOrganizations(user.id);
+        // Filtere nur Organisationen, in denen User Admin ist (für Wechsel)
+        const adminOrgs = userOrgs.filter(org => {
+          // Vereinfacht: Alle Orgs des Users (kann später erweitert werden)
+          return true;
+        });
+        setAvailableOrganizations(adminOrgs);
+      } catch (error) {
+        console.error('Fehler beim Laden der User-Organisationen:', error);
+      }
+    }
+  };
+
   // Auth-State-Listener: Auto-Login nach Reload
   useEffect(() => {
     const { data: { subscription } } = onAuthStateChange(async (user) => {
       if (user) {
         setCurrentUser(user);
         await loadData(user);
+        await loadAvailableOrganizations(user);
       } else {
         setCurrentUser(null);
         setAssets([]);
         setHistory([]);
         setUsers([]);
+        setAvailableOrganizations([]);
       }
       setIsLoading(false);
     });
 
     // Initial-Check
-    getCurrentUser().then((user) => {
+    getCurrentUser().then(async (user) => {
       if (user) {
         setCurrentUser(user);
-        loadData(user);
+        await loadData(user);
+        await loadAvailableOrganizations(user);
       }
       setIsLoading(false);
     });
@@ -110,38 +146,7 @@ const App: React.FC = () => {
   const handleLogin = async (user: User) => {
     setCurrentUser(user);
     await loadData(user);
-    
-    // Lade verfügbare Organisationen (für Super-Admin oder User mit mehreren Orgs)
-    if (user.role === UserRole.SUPER_ADMIN) {
-      try {
-        // Super-Admin sieht alle Organisationen
-        const allOrgs = await fetchAllOrganizations();
-        setAvailableOrganizations(allOrgs);
-      } catch (error) {
-        console.error('Fehler beim Laden aller Organisationen:', error);
-        // Fallback: Lade nur User-Organisationen
-        try {
-          const userOrgs = await fetchUserOrganizations(user.id);
-          setAvailableOrganizations(userOrgs);
-        } catch (fallbackError) {
-          console.error('Fehler beim Fallback-Laden:', fallbackError);
-        }
-      }
-    } else {
-      try {
-        // Normale User: Nur Organisationen, in denen sie Mitglied sind
-        const userOrgs = await fetchUserOrganizations(user.id);
-        // Filtere nur Organisationen, in denen User Admin ist (für Wechsel)
-        const adminOrgs = userOrgs.filter(org => {
-          // Vereinfacht: Alle Orgs des Users (kann später erweitert werden)
-          return true;
-        });
-        setAvailableOrganizations(adminOrgs);
-      } catch (error) {
-        console.error('Fehler beim Laden der User-Organisationen:', error);
-      }
-    }
-    
+    await loadAvailableOrganizations(user);
     showNotification(`Willkommen zurück, ${user.firstName}!`, 'success');
   };
 
@@ -154,6 +159,8 @@ const App: React.FC = () => {
       if (user) {
         setCurrentUser(user);
         await loadData(user);
+        // Aktualisiere verfügbare Organisationen nach Wechsel
+        await loadAvailableOrganizations(user);
         setIsOrgDropdownOpen(false);
         showNotification(`Zu ${user.organizationName} gewechselt`, 'success');
       }
@@ -419,8 +426,8 @@ const App: React.FC = () => {
 
             <div className="h-8 w-px bg-white/10 mx-1"></div>
 
-            {/* Organisation-Dropdown (nur wenn mehrere Organisationen verfügbar) */}
-            {availableOrganizations.length > 1 && (
+            {/* Organisation-Dropdown (für Super-Admin immer, sonst nur bei mehreren Orgs) */}
+            {((currentUser.role === UserRole.SUPER_ADMIN && availableOrganizations.length > 0) || availableOrganizations.length > 1) && (
               <div className="relative org-dropdown-container">
                 <button
                   onClick={() => setIsOrgDropdownOpen(!isOrgDropdownOpen)}
