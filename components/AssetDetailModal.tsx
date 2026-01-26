@@ -281,6 +281,129 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
               {/* Tab: Basis - nur im Edit-Mode oder wenn Basis-Tab aktiv */}
               {(infoSubTab === 'basic' || editMode) && (
                 <form onSubmit={handleSubmit} className="space-y-6">
+                  {/* Tab: Basis - Edit-Mode Ansicht */}
+                  {editMode && (
+                    <div className="space-y-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Asset Foto</label>
+                            <div className="relative rounded-2xl overflow-hidden aspect-video shadow-inner bg-slate-100 dark:bg-slate-900 border-2 border-dashed border-slate-200 dark:border-slate-800">
+                              {formData.imageUrl ? (
+                                <>
+                                  <img src={formData.imageUrl} alt={formData.model} className="w-full h-full object-cover" />
+                                  <div onClick={() => fileInputRef.current?.click()} className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center cursor-pointer opacity-0 hover:opacity-100 transition-opacity">
+                                    <svg className="w-10 h-10 text-white mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                                    <span className="text-white text-[10px] font-black uppercase tracking-widest">Bild ändern</span>
+                                  </div>
+                                  {isAdmin && (
+                                    <button
+                                      type="button"
+                                      onClick={async (e) => {
+                                        e.stopPropagation();
+                                        if (confirm('Bild wirklich entfernen?')) {
+                                          setFormData(prev => ({ ...prev, imageUrl: '' }));
+                                          setSelectedFile(null);
+                                          if (fileInputRef.current) {
+                                            fileInputRef.current.value = '';
+                                          }
+                                        }
+                                      }}
+                                      className="absolute top-2 right-2 bg-rose-600 hover:bg-rose-700 text-white p-2 rounded-lg shadow-lg transition-all"
+                                      title="Bild entfernen"
+                                    >
+                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                      </svg>
+                                    </button>
+                                  )}
+                                </>
+                              ) : (
+                                <div onClick={() => fileInputRef.current?.click()} className="w-full h-full flex items-center justify-center cursor-pointer">
+                                  <div className="text-center">
+                                    <svg className="w-12 h-12 text-slate-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    </svg>
+                                    <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Bild hinzufügen</p>
+                                  </div>
+                                </div>
+                              )}
+                              <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageChange} />
+                              {selectedFile && (
+                                <button
+                                  type="button"
+                                  onClick={handleImageUpload}
+                                  disabled={isUploadingImage}
+                                  className="mt-2 w-full py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-400 text-white font-black rounded-lg uppercase text-xs tracking-widest transition-all"
+                                >
+                                  {isUploadingImage ? 'Upload läuft...' : 'Bild hochladen'}
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                          <div className="p-5 bg-blue-50/50 dark:bg-blue-900/10 rounded-2xl border border-blue-100 dark:border-blue-900/30">
+                            <label className="block text-[10px] font-black text-blue-400 uppercase tracking-widest mb-2">QR-CODE IDENTIFIER *</label>
+                            <input type="text" name="qrCode" value={formData.qrCode} onChange={handleChange} required className="w-full p-3 bg-white dark:bg-slate-900 border border-blue-200 rounded-xl text-xs font-black text-blue-600 uppercase italic outline-none" />
+                          </div>
+                        </div>
+
+                        <div className="space-y-4">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Marke *</label>
+                              <input type="text" name="brand" value={formData.brand} onChange={handleChange} required className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-bold outline-none dark:text-white" />
+                            </div>
+                            <div>
+                              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Modell *</label>
+                              <input type="text" name="model" value={formData.model} onChange={handleChange} required className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-bold outline-none dark:text-white" />
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Kategorie</label>
+                            <select name="type" value={formData.type} onChange={handleChange} className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-bold outline-none dark:text-white">
+                              {Object.values(AssetType).map(t => <option key={t} value={t}>{AssetTypeLabels[t]}</option>)}
+                            </select>
+                          </div>
+
+                          {formData.type === AssetType.VEHICLE && (
+                            <div className="animate-in slide-in-from-left-2 duration-300">
+                              <label className="block text-[10px] font-black text-blue-500 uppercase tracking-widest mb-1">Kennzeichen</label>
+                              <input type="text" name="licensePlate" value={formData.licensePlate || ''} onChange={handleChange} className="w-full p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-900 rounded-xl text-sm font-black italic tracking-tighter outline-none dark:text-white uppercase" placeholder="Z.B. B-FLX 101" />
+                            </div>
+                          )}
+
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Wartungsintervall</label>
+                              <select name="maintenanceIntervalMonths" value={formData.maintenanceIntervalMonths} onChange={handleChange} className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-bold outline-none dark:text-white">
+                                <option value={3}>3 Monate</option>
+                                <option value={6}>6 Monate</option>
+                                <option value={12}>12 Monate</option>
+                                <option value={24}>24 Monate</option>
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Zustand (1-5)</label>
+                              <input type="number" min="1" max="5" name="condition" value={formData.condition} onChange={handleChange} className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-bold outline-none dark:text-white" />
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Kaufjahr</label>
+                              <input type="number" name="purchaseYear" value={formData.purchaseYear} onChange={handleChange} className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-bold outline-none dark:text-white" />
+                            </div>
+                            <div>
+                              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Garantie bis</label>
+                              <input type="date" name="warrantyUntil" value={formData.warrantyUntil || ''} onChange={handleChange} className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-bold outline-none dark:text-white" />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Tab: Basis - Read-Only Ansicht */}
                   {infoSubTab === 'basic' && !editMode && (
                     <div className="space-y-6">
