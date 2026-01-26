@@ -159,8 +159,8 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-      <div className="bg-white dark:bg-[#0d1117] w-full max-w-2xl rounded-3xl overflow-hidden shadow-2xl border border-blue-500/20 flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
+      <div className="bg-white dark:bg-[#0d1117] w-full max-w-5xl rounded-3xl overflow-hidden shadow-2xl border border-blue-500/20 flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
         {/* Header */}
         <div className="p-6 bg-slate-900 dark:bg-[#010409] flex justify-between items-center border-b border-blue-900/30">
           <div>
@@ -177,35 +177,57 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
         </div>
 
         {/* Tabs */}
-        <div className="flex bg-slate-100 dark:bg-slate-900 p-1 mx-6 mt-6 rounded-2xl border border-slate-200 dark:border-slate-800">
-          <button 
-            onClick={() => { setActiveTab('info'); setIsConfirmingDelete(false); }}
-            className={`flex-1 py-2 text-[10px] font-black uppercase italic tracking-tighter rounded-xl transition-all ${activeTab === 'info' ? 'bg-white dark:bg-slate-800 shadow-sm text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'}`}
-          >
-            Info
-          </button>
-          <button 
-            onClick={() => { setActiveTab('maintenance'); setEditMode(false); setIsConfirmingDelete(false); }}
-            className={`flex-1 py-2 text-[10px] font-black uppercase italic tracking-tighter rounded-xl transition-all ${activeTab === 'maintenance' ? 'bg-white dark:bg-slate-800 shadow-sm text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'}`}
-          >
-            Service
-          </button>
-          <button 
-            onClick={() => { setActiveTab('history'); setEditMode(false); setIsConfirmingDelete(false); }}
-            className={`flex-1 py-2 text-[10px] font-black uppercase italic tracking-tighter rounded-xl transition-all ${activeTab === 'history' ? 'bg-white dark:bg-slate-800 shadow-sm text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'}`}
-          >
-            Leihe
-          </button>
-          <button 
-            onClick={() => { setActiveTab('qr'); setEditMode(false); setIsConfirmingDelete(false); }}
-            className={`flex-1 py-2 text-[10px] font-black uppercase italic tracking-tighter rounded-xl transition-all ${activeTab === 'qr' ? 'bg-white dark:bg-slate-800 shadow-sm text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'}`}
-          >
-            Label
-          </button>
+        <div className="px-6 pt-4 border-b border-slate-200 dark:border-slate-800">
+          <div className="flex gap-2 overflow-x-auto custom-scrollbar">
+            <button 
+              onClick={() => { setActiveTab('info'); setIsConfirmingDelete(false); }}
+              className={`px-4 py-2 rounded-xl text-sm font-black uppercase italic tracking-tighter transition-all whitespace-nowrap ${
+                activeTab === 'info'
+                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+              }`}
+            >
+              <span className="mr-2">📋</span>
+              Info
+            </button>
+            <button 
+              onClick={() => { setActiveTab('maintenance'); setEditMode(false); setIsConfirmingDelete(false); }}
+              className={`px-4 py-2 rounded-xl text-sm font-black uppercase italic tracking-tighter transition-all whitespace-nowrap ${
+                activeTab === 'maintenance'
+                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+              }`}
+            >
+              <span className="mr-2">🔧</span>
+              Service
+            </button>
+            <button 
+              onClick={() => { setActiveTab('history'); setEditMode(false); setIsConfirmingDelete(false); }}
+              className={`px-4 py-2 rounded-xl text-sm font-black uppercase italic tracking-tighter transition-all whitespace-nowrap ${
+                activeTab === 'history'
+                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+              }`}
+            >
+              <span className="mr-2">📦</span>
+              Leihe
+            </button>
+            <button 
+              onClick={() => { setActiveTab('qr'); setEditMode(false); setIsConfirmingDelete(false); }}
+              className={`px-4 py-2 rounded-xl text-sm font-black uppercase italic tracking-tighter transition-all whitespace-nowrap ${
+                activeTab === 'qr'
+                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+              }`}
+            >
+              <span className="mr-2">🏷️</span>
+              Label
+            </button>
+          </div>
         </div>
 
         {/* Tab Content */}
-        <div className="overflow-y-auto p-6 flex-grow custom-scrollbar">
+        <div className="overflow-y-auto p-8 flex-grow custom-scrollbar">
           {isConfirmingDelete ? (
             <div className="h-full flex flex-col items-center justify-center py-12 text-center animate-in fade-in zoom-in-95 duration-200">
               <div className="w-20 h-20 bg-rose-50 dark:bg-rose-950 text-rose-500 rounded-full flex items-center justify-center mb-6">
@@ -220,367 +242,597 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
             </div>
           ) : activeTab === 'info' && (
             <div className="space-y-6 animate-in fade-in duration-300">
-              {/* Bild & Basis-Info */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div className="relative rounded-2xl overflow-hidden aspect-video shadow-inner bg-slate-100 dark:bg-slate-900 group border border-slate-200 dark:border-slate-800">
-                    <img src={formData.imageUrl} alt={formData.model} className="w-full h-full object-cover" />
-                    {editMode && (
-                      <div onClick={() => fileInputRef.current?.click()} className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center cursor-pointer opacity-100 transition-opacity">
-                        <svg className="w-10 h-10 text-white mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                        <span className="text-white text-[10px] font-black uppercase tracking-widest">Bild ändern</span>
-                      </div>
-                    )}
-                    <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageChange} />
-                  </div>
-                  {isAdmin && formData.status === 'loaned' && !editMode && (
-                    <button onClick={() => onReturn?.(formData)} className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-2xl uppercase text-[10px] tracking-widest italic shadow-xl shadow-emerald-600/20 transition-all flex items-center justify-center gap-2">Zurückgeben</button>
-                  )}
-                  {formData.type === AssetType.VEHICLE && formData.licensePlate && (
-                    <div className="p-4 bg-slate-900 border border-slate-800 rounded-2xl flex items-center justify-between">
-                      <div>
-                        <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Kennzeichen</p>
-                        <p className="text-lg font-black text-white italic tracking-tighter">{formData.licensePlate}</p>
-                      </div>
-                      <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center">
-                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
-                      </div>
-                    </div>
-                  )}
+              {/* Admin-Actions */}
+              {isAdmin && !editMode && (
+                <div className="flex justify-end gap-4 mb-4">
+                  <button type="button" onClick={() => setIsConfirmingDelete(true)} className="text-sm font-black text-rose-500 uppercase italic tracking-widest hover:underline">Löschen</button>
+                  <button type="button" onClick={() => setEditMode(true)} className="text-sm font-black text-blue-600 dark:text-blue-400 uppercase italic tracking-widest hover:underline">Ändern</button>
                 </div>
+              )}
 
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="flex justify-between items-center mb-2">
-                    <h3 className="text-sm font-black text-slate-800 dark:text-slate-200 uppercase italic tracking-tighter">Details</h3>
-                    {isAdmin && !editMode && (
-                      <div className="flex gap-4">
-                        <button type="button" onClick={() => setIsConfirmingDelete(true)} className="text-[10px] font-black text-rose-500 uppercase italic tracking-widest hover:underline">Löschen</button>
-                        <button type="button" onClick={() => setEditMode(true)} className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase italic tracking-widest hover:underline">Ändern</button>
-                      </div>
-                    )}
-                  </div>
+              {/* Info Sub-Tabs */}
+              {!editMode && (
+                <div className="flex gap-2 overflow-x-auto custom-scrollbar pb-4">
+                  {[
+                    { id: 'basic' as const, label: 'Basis', icon: '📋' },
+                    { id: 'general' as const, label: 'Allgemein', icon: '📝' },
+                    { id: 'financial' as const, label: 'Finanzen', icon: '💰' },
+                    ...(formData.type === AssetType.VEHICLE ? [{ id: 'vehicle' as const, label: 'Fahrzeug', icon: '🚗' }] : []),
+                    ...(formData.type === AssetType.MACHINE ? [{ id: 'machine' as const, label: 'Maschine', icon: '⚙️' }] : []),
+                    ...(formData.type === AssetType.TOOL ? [{ id: 'tool' as const, label: 'Werkzeug', icon: '🔧' }] : []),
+                  ].map(tab => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setInfoSubTab(tab.id)}
+                      className={`px-4 py-2 rounded-xl text-sm font-black uppercase italic tracking-tighter whitespace-nowrap transition-all ${
+                        infoSubTab === tab.id
+                          ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+                      }`}
+                    >
+                      <span className="mr-2">{tab.icon}</span>
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+              )}
 
-                  {/* Info Sub-Tabs */}
-                  {!editMode && (
-                    <div className="flex gap-2 overflow-x-auto custom-scrollbar pb-2">
-                      {[
-                        { id: 'basic' as const, label: 'Basis', icon: '📋' },
-                        { id: 'general' as const, label: 'Allgemein', icon: '📝' },
-                        { id: 'financial' as const, label: 'Finanzen', icon: '💰' },
-                        ...(formData.type === AssetType.VEHICLE ? [{ id: 'vehicle' as const, label: 'Fahrzeug', icon: '🚗' }] : []),
-                        ...(formData.type === AssetType.MACHINE ? [{ id: 'machine' as const, label: 'Maschine', icon: '⚙️' }] : []),
-                        ...(formData.type === AssetType.TOOL ? [{ id: 'tool' as const, label: 'Werkzeug', icon: '🔧' }] : []),
-                      ].map(tab => (
-                        <button
-                          key={tab.id}
-                          type="button"
-                          onClick={() => setInfoSubTab(tab.id)}
-                          className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase italic tracking-tighter whitespace-nowrap transition-all ${
-                            infoSubTab === tab.id
-                              ? 'bg-blue-600 text-white'
-                              : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
-                          }`}
-                        >
-                          <span className="mr-1">{tab.icon}</span>
-                          {tab.label}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Basis-Info */}
-                  {(infoSubTab === 'basic' || editMode) && (
-                    <div className="space-y-3">
-                      <div className="grid grid-cols-2 gap-3">
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Tab: Basis */}
+                {(infoSubTab === 'basic' || editMode) && (
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-4">
                         <div>
-                          <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase mb-1">Marke</label>
-                          {editMode ? <input type="text" name="brand" value={formData.brand} onChange={handleChange} className="w-full p-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold outline-none dark:text-white" /> : <p className="text-xs font-black text-slate-700 dark:text-slate-300">{formData.brand}</p>}
+                          <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Asset Foto</label>
+                          <div className="relative rounded-2xl overflow-hidden aspect-video shadow-inner bg-slate-100 dark:bg-slate-900 border-2 border-dashed border-slate-200 dark:border-slate-800">
+                            <img src={formData.imageUrl} alt={formData.model} className="w-full h-full object-cover" />
+                            {editMode && (
+                              <div onClick={() => fileInputRef.current?.click()} className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center cursor-pointer opacity-100 transition-opacity">
+                                <svg className="w-10 h-10 text-white mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                                <span className="text-white text-[10px] font-black uppercase tracking-widest">Bild ändern</span>
+                              </div>
+                            )}
+                            <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageChange} />
+                          </div>
                         </div>
-                        <div>
-                          <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase mb-1">Modell</label>
-                          {editMode ? <input type="text" name="model" value={formData.model} onChange={handleChange} className="w-full p-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold outline-none dark:text-white" /> : <p className="text-xs font-black text-slate-700 dark:text-slate-300">{formData.model}</p>}
-                        </div>
+                        {!editMode && (
+                          <div className="p-5 bg-blue-50/50 dark:bg-blue-900/10 rounded-2xl border border-blue-100 dark:border-blue-900/30">
+                            <label className="block text-[10px] font-black text-blue-400 uppercase tracking-widest mb-2">QR-CODE IDENTIFIER</label>
+                            <p className="text-xs font-black text-blue-600 uppercase italic">{formData.qrCode}</p>
+                          </div>
+                        )}
+                        {isAdmin && formData.status === 'loaned' && !editMode && (
+                          <button onClick={() => onReturn?.(formData)} className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-2xl uppercase text-sm tracking-widest italic shadow-xl shadow-emerald-600/20 transition-all flex items-center justify-center gap-2">Zurückgeben</button>
+                        )}
+                        {formData.type === AssetType.VEHICLE && formData.licensePlate && (
+                          <div className="p-4 bg-slate-900 border border-slate-800 rounded-2xl flex items-center justify-between">
+                            <div>
+                              <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Kennzeichen</p>
+                              <p className="text-lg font-black text-white italic tracking-tighter">{formData.licensePlate}</p>
+                            </div>
+                            <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center">
+                              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                      <div className="grid grid-cols-2 gap-3">
+
+                      <div className="space-y-4">
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Marke</label>
+                            {editMode ? (
+                              <input type="text" name="brand" value={formData.brand} onChange={handleChange} className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-bold outline-none dark:text-white" />
+                            ) : (
+                              <p className="text-sm font-black text-slate-700 dark:text-slate-300">{formData.brand}</p>
+                            )}
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Modell</label>
+                            {editMode ? (
+                              <input type="text" name="model" value={formData.model} onChange={handleChange} className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-bold outline-none dark:text-white" />
+                            ) : (
+                              <p className="text-sm font-black text-slate-700 dark:text-slate-300">{formData.model}</p>
+                            )}
+                          </div>
+                        </div>
+
                         <div>
-                          <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase mb-1">Kategorie</label>
+                          <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Kategorie</label>
                           {editMode ? (
-                            <select name="type" value={formData.type} onChange={handleChange} className="w-full p-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold outline-none dark:text-white">
+                            <select name="type" value={formData.type} onChange={handleChange} className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-bold outline-none dark:text-white">
                               {Object.values(AssetType).map(t => <option key={t} value={t}>{AssetTypeLabels[t]}</option>)}
                             </select>
                           ) : (
-                            <p className="text-xs font-black text-slate-700 dark:text-slate-300">{AssetTypeLabels[formData.type]}</p>
+                            <p className="text-sm font-black text-slate-700 dark:text-slate-300">{AssetTypeLabels[formData.type]}</p>
                           )}
                         </div>
-                        <div>
-                          <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase mb-1">Zustand</label>
-                          {editMode ? (
-                            <input type="number" min="1" max="5" name="condition" value={formData.condition} onChange={handleChange} className="w-full p-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold outline-none dark:text-white" />
-                          ) : (
-                            <p className="text-xs font-black text-slate-700 dark:text-slate-300">{formData.condition}/5</p>
-                          )}
+
+                        {formData.type === AssetType.VEHICLE && (
+                          <div className="animate-in slide-in-from-left-2 duration-300">
+                            <label className="block text-[10px] font-black text-blue-500 uppercase tracking-widest mb-1">Kennzeichen</label>
+                            {editMode ? (
+                              <input type="text" name="licensePlate" value={formData.licensePlate || ''} onChange={handleChange} className="w-full p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-900 rounded-xl text-sm font-black italic tracking-tighter outline-none dark:text-white uppercase" placeholder="Z.B. B-FLX 101" />
+                            ) : (
+                              <p className="text-sm font-black text-slate-700 dark:text-slate-300 uppercase">{formData.licensePlate || '—'}</p>
+                            )}
+                          </div>
+                        )}
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Wartungsintervall</label>
+                            {editMode ? (
+                              <select name="maintenanceIntervalMonths" value={formData.maintenanceIntervalMonths} onChange={handleChange} className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-bold outline-none dark:text-white">
+                                <option value={3}>3 Monate</option>
+                                <option value={6}>6 Monate</option>
+                                <option value={12}>12 Monate</option>
+                                <option value={24}>24 Monate</option>
+                              </select>
+                            ) : (
+                              <p className="text-sm font-black text-slate-700 dark:text-slate-300">{formData.maintenanceIntervalMonths} Monate</p>
+                            )}
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Zustand (1-5)</label>
+                            {editMode ? (
+                              <input type="number" min="1" max="5" name="condition" value={formData.condition} onChange={handleChange} className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-bold outline-none dark:text-white" />
+                            ) : (
+                              <p className="text-sm font-black text-slate-700 dark:text-slate-300">{formData.condition}/5</p>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Kaufjahr</label>
+                            {editMode ? (
+                              <input type="number" name="purchaseYear" value={formData.purchaseYear} onChange={handleChange} className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-bold outline-none dark:text-white" />
+                            ) : (
+                              <p className="text-sm font-black text-slate-700 dark:text-slate-300">{formData.purchaseYear || '—'}</p>
+                            )}
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Garantie bis</label>
+                            {editMode ? (
+                              <input type="date" name="warrantyUntil" value={formData.warrantyUntil || ''} onChange={handleChange} className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-bold outline-none dark:text-white" />
+                            ) : (
+                              <p className="text-sm font-black text-slate-700 dark:text-slate-300">{formData.warrantyUntil ? new Date(formData.warrantyUntil).toLocaleDateString('de-DE') : '—'}</p>
+                            )}
+                          </div>
                         </div>
                       </div>
-                      {formData.type === AssetType.VEHICLE && (
-                        <div>
-                          <label className="block text-[9px] font-black text-slate-400 uppercase mb-1">Kennzeichen</label>
-                          {editMode ? (
-                            <input type="text" name="licensePlate" value={formData.licensePlate || ''} onChange={handleChange} className="w-full p-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 rounded-xl text-xs font-bold outline-none dark:text-white uppercase" />
-                          ) : (
-                            <p className="text-xs font-black text-slate-700 dark:text-slate-300">{formData.licensePlate || '—'}</p>
-                          )}
-                        </div>
-                      )}
-                      {(formData.type === AssetType.MACHINE || formData.type === AssetType.TOOL) && formData.serialNumber && (
-                        <div>
-                          <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase mb-1">Seriennummer</label>
-                          {editMode ? (
-                            <input type="text" name="serialNumber" value={formData.serialNumber || ''} onChange={handleChange} className="w-full p-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold outline-none dark:text-white" />
-                          ) : (
-                            <p className="text-xs font-black text-slate-700 dark:text-slate-300">{formData.serialNumber}</p>
-                          )}
-                        </div>
-                      )}
-                      {formData.type === AssetType.VEHICLE && formData.vin && (
-                        <div>
-                          <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase mb-1">Fahrgestellnummer (VIN)</label>
-                          {editMode ? (
-                            <input type="text" name="vin" value={formData.vin || ''} onChange={handleChange} className="w-full p-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold outline-none dark:text-white uppercase" />
-                          ) : (
-                            <p className="text-xs font-black text-slate-700 dark:text-slate-300 font-mono">{formData.vin}</p>
-                          )}
-                        </div>
-                      )}
-                      {formData.type === AssetType.VEHICLE && formData.mileage !== undefined && (
-                        <div>
-                          <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase mb-1">Kilometerstand</label>
-                          {editMode ? (
-                            <input type="number" name="mileage" value={formData.mileage || ''} onChange={handleChange} className="w-full p-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold outline-none dark:text-white" />
-                          ) : (
-                            <p className="text-xs font-black text-slate-700 dark:text-slate-300">{formData.mileage?.toLocaleString('de-DE') || '—'} km</p>
-                          )}
-                        </div>
-                      )}
                     </div>
                   )}
 
-                  {/* Allgemeine Info */}
-                  {!editMode && infoSubTab === 'general' && (
-                    <div className="space-y-4">
-                      {formData.description && (
-                        <div>
-                          <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase mb-1">Beschreibung</label>
-                          <p className="text-xs text-slate-700 dark:text-slate-300 whitespace-pre-wrap">{formData.description}</p>
+                {/* Tab: Allgemein */}
+                {!editMode && infoSubTab === 'general' && (
+                  <div className="space-y-6">
+                    {formData.description && (
+                      <div>
+                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Beschreibung</label>
+                        <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">{formData.description}</p>
+                      </div>
+                    )}
+                    {formData.notes && (
+                      <div>
+                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Notizen</label>
+                        <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">{formData.notes}</p>
+                      </div>
+                    )}
+                    {formData.tags && formData.tags.length > 0 && (
+                      <div>
+                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Tags</label>
+                        <div className="flex flex-wrap gap-2">
+                          {formData.tags.map((tag, idx) => (
+                            <span key={idx} className="px-3 py-1.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-lg text-sm font-bold">{tag}</span>
+                          ))}
                         </div>
-                      )}
+                      </div>
+                    )}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {formData.location && (
                         <div>
-                          <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase mb-1">Standort</label>
-                          <p className="text-xs font-black text-slate-700 dark:text-slate-300">{formData.location}</p>
+                          <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Standort</label>
+                          <p className="text-sm font-black text-slate-700 dark:text-slate-300">{formData.location}</p>
                         </div>
                       )}
                       {formData.department && (
                         <div>
-                          <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase mb-1">Abteilung</label>
-                          <p className="text-xs font-black text-slate-700 dark:text-slate-300">{formData.department}</p>
+                          <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Abteilung</label>
+                          <p className="text-sm font-black text-slate-700 dark:text-slate-300">{formData.department}</p>
                         </div>
                       )}
                       {formData.costCenter && (
                         <div>
-                          <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase mb-1">Kostenstelle</label>
-                          <p className="text-xs font-black text-slate-700 dark:text-slate-300">{formData.costCenter}</p>
-                        </div>
-                      )}
-                      {formData.supplier && (
-                        <div>
-                          <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase mb-1">Lieferant</label>
-                          <p className="text-xs font-black text-slate-700 dark:text-slate-300">{formData.supplier}</p>
-                        </div>
-                      )}
-                      {formData.tags && formData.tags.length > 0 && (
-                        <div>
-                          <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase mb-1">Tags</label>
-                          <div className="flex flex-wrap gap-2">
-                            {formData.tags.map((tag, idx) => (
-                              <span key={idx} className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-lg text-[10px] font-bold">{tag}</span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      {(formData.hasInvoice || formData.hasWarrantyCertificate || formData.hasManual) && (
-                        <div>
-                          <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase mb-2">Dokumente vorhanden</label>
-                          <div className="flex flex-wrap gap-3">
-                            {formData.hasInvoice && <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">✓ Rechnung</span>}
-                            {formData.hasWarrantyCertificate && <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">✓ Garantieschein</span>}
-                            {formData.hasManual && <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">✓ Bedienungsanleitung</span>}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Finanzen */}
-                  {!editMode && infoSubTab === 'financial' && (
-                    <div className="space-y-3">
-                      {formData.purchasePrice !== undefined && (
-                        <div>
-                          <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase mb-1">Anschaffungspreis</label>
-                          <p className="text-xs font-black text-slate-700 dark:text-slate-300">{formData.purchasePrice.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}</p>
-                        </div>
-                      )}
-                      {formData.residualValue !== undefined && (
-                        <div>
-                          <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase mb-1">Restwert</label>
-                          <p className="text-xs font-black text-slate-700 dark:text-slate-300">{formData.residualValue.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}</p>
+                          <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Kostenstelle</label>
+                          <p className="text-sm font-black text-slate-700 dark:text-slate-300">{formData.costCenter}</p>
                         </div>
                       )}
                       {formData.purchaseDate && (
                         <div>
-                          <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase mb-1">Anschaffungsdatum</label>
-                          <p className="text-xs font-black text-slate-700 dark:text-slate-300">{new Date(formData.purchaseDate).toLocaleDateString('de-DE')}</p>
+                          <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Anschaffungsdatum</label>
+                          <p className="text-sm font-black text-slate-700 dark:text-slate-300">{new Date(formData.purchaseDate).toLocaleDateString('de-DE')}</p>
+                        </div>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {formData.supplier && (
+                        <div>
+                          <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Lieferant</label>
+                          <p className="text-sm font-black text-slate-700 dark:text-slate-300">{formData.supplier}</p>
                         </div>
                       )}
                       {formData.invoiceNumber && (
                         <div>
-                          <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase mb-1">Rechnungsnummer</label>
-                          <p className="text-xs font-black text-slate-700 dark:text-slate-300">{formData.invoiceNumber}</p>
+                          <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Rechnungsnummer</label>
+                          <p className="text-sm font-black text-slate-700 dark:text-slate-300">{formData.invoiceNumber}</p>
                         </div>
                       )}
                     </div>
-                  )}
+                    {(formData.hasInvoice || formData.hasWarrantyCertificate || formData.hasManual) && (
+                      <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800">
+                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Dokumente vorhanden</label>
+                        <div className="grid grid-cols-3 gap-3">
+                          {formData.hasInvoice && <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">✓ Rechnung</span>}
+                          {formData.hasWarrantyCertificate && <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">✓ Garantieschein</span>}
+                          {formData.hasManual && <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">✓ Bedienungsanleitung</span>}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
 
-                  {/* Fahrzeug-spezifisch */}
-                  {!editMode && infoSubTab === 'vehicle' && formData.type === AssetType.VEHICLE && (
-                    <div className="space-y-4">
-                      {formData.vin && (
+                {/* Tab: Finanzen */}
+                {!editMode && infoSubTab === 'financial' && (
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {formData.purchasePrice !== undefined && (
                         <div>
-                          <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase mb-1">Fahrgestellnummer (VIN)</label>
-                          <p className="text-xs font-black text-slate-700 dark:text-slate-300 font-mono">{formData.vin}</p>
+                          <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Anschaffungspreis (€)</label>
+                          <p className="text-sm font-black text-slate-700 dark:text-slate-300">{formData.purchasePrice.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}</p>
                         </div>
                       )}
-                      {formData.vehicleClass && (
+                      {formData.residualValue !== undefined && (
                         <div>
-                          <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase mb-1">Fahrzeugklasse</label>
-                          <p className="text-xs font-black text-slate-700 dark:text-slate-300">{formData.vehicleClass}</p>
-                        </div>
-                      )}
-                      {(formData.engineDisplacement || formData.power || formData.fuelType || formData.transmission) && (
-                        <div className="p-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800">
-                          <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase mb-2">Technische Daten</label>
-                          <div className="grid grid-cols-2 gap-2 text-xs">
-                            {formData.engineDisplacement && <div><span className="text-slate-500">Hubraum:</span> <span className="font-bold">{formData.engineDisplacement}</span></div>}
-                            {formData.power && <div><span className="text-slate-500">Leistung:</span> <span className="font-bold">{formData.power}</span></div>}
-                            {formData.fuelType && <div><span className="text-slate-500">Kraftstoff:</span> <span className="font-bold">{formData.fuelType}</span></div>}
-                            {formData.transmission && <div><span className="text-slate-500">Getriebe:</span> <span className="font-bold">{formData.transmission}</span></div>}
-                          </div>
-                        </div>
-                      )}
-                      {(formData.insuranceCompany || formData.insuranceNumber || formData.insuranceUntil) && (
-                        <div className="p-3 bg-emerald-50/50 dark:bg-emerald-900/10 rounded-xl border border-emerald-100 dark:border-emerald-900/30">
-                          <label className="block text-[9px] font-black text-emerald-600 dark:text-emerald-400 uppercase mb-2">Versicherung</label>
-                          <div className="space-y-1 text-xs">
-                            {formData.insuranceCompany && <div><span className="text-slate-500">Gesellschaft:</span> <span className="font-bold">{formData.insuranceCompany}</span></div>}
-                            {formData.insuranceNumber && <div><span className="text-slate-500">Nummer:</span> <span className="font-bold">{formData.insuranceNumber}</span></div>}
-                            {formData.insuranceUntil && <div><span className="text-slate-500">Gültig bis:</span> <span className="font-bold">{new Date(formData.insuranceUntil).toLocaleDateString('de-DE')}</span></div>}
-                          </div>
-                        </div>
-                      )}
-                      {(formData.hasVehicleRegistration || formData.hasVehicleTitle || formData.hasServiceBook) && (
-                        <div>
-                          <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase mb-2">Dokumente</label>
-                          <div className="flex flex-wrap gap-3">
-                            {formData.hasVehicleRegistration && <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">✓ Fahrzeugschein</span>}
-                            {formData.hasVehicleTitle && <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">✓ Fahrzeugbrief</span>}
-                            {formData.hasServiceBook && <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">✓ Serviceheft</span>}
-                          </div>
+                          <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Restwert (€)</label>
+                          <p className="text-sm font-black text-slate-700 dark:text-slate-300">{formData.residualValue.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}</p>
                         </div>
                       )}
                     </div>
-                  )}
+                    {formData.depreciationYears !== undefined && (
+                      <div>
+                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Abschreibungsdauer (Jahre)</label>
+                        <p className="text-sm font-black text-slate-700 dark:text-slate-300">{formData.depreciationYears} Jahre</p>
+                      </div>
+                    )}
+                  </div>
+                )}
 
-                  {/* Maschine-spezifisch */}
-                  {!editMode && infoSubTab === 'machine' && formData.type === AssetType.MACHINE && (
-                    <div className="space-y-4">
-                      {formData.serialNumber && (
-                        <div>
-                          <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase mb-1">Seriennummer</label>
-                          <p className="text-xs font-black text-slate-700 dark:text-slate-300">{formData.serialNumber}</p>
-                        </div>
-                      )}
-                      {(formData.machinePower || formData.weight || formData.voltage) && (
-                        <div className="p-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800">
-                          <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase mb-2">Technische Daten</label>
-                          <div className="grid grid-cols-2 gap-2 text-xs">
-                            {formData.machinePower && <div><span className="text-slate-500">Leistung:</span> <span className="font-bold">{formData.machinePower}</span></div>}
-                            {formData.weight && <div><span className="text-slate-500">Gewicht:</span> <span className="font-bold">{formData.weight}</span></div>}
-                            {formData.voltage && <div><span className="text-slate-500">Spannung:</span> <span className="font-bold">{formData.voltage}</span></div>}
-                            {formData.dimensions && <div><span className="text-slate-500">Abmessungen:</span> <span className="font-bold">{formData.dimensions}</span></div>}
+                {/* Tab: Fahrzeug */}
+                {!editMode && infoSubTab === 'vehicle' && formData.type === AssetType.VEHICLE && (
+                  <div className="space-y-6">
+                    <div className="p-4 bg-blue-50/50 dark:bg-blue-900/10 rounded-xl border border-blue-100 dark:border-blue-900/30">
+                      <h3 className="text-sm font-black text-blue-600 dark:text-blue-400 uppercase italic tracking-tighter mb-4">Identifikation</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {formData.vin && (
+                          <div>
+                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Fahrgestellnummer (VIN)</label>
+                            <p className="text-sm font-black text-slate-700 dark:text-slate-300 font-mono uppercase">{formData.vin}</p>
                           </div>
-                        </div>
-                      )}
-                      {(formData.lastUvvInspection || formData.nextUvvInspection) && (
-                        <div className="p-3 bg-emerald-50/50 dark:bg-emerald-900/10 rounded-xl border border-emerald-100 dark:border-emerald-900/30">
-                          <label className="block text-[9px] font-black text-emerald-600 dark:text-emerald-400 uppercase mb-2">UVV-Prüfung</label>
-                          <div className="space-y-1 text-xs">
-                            {formData.lastUvvInspection && <div><span className="text-slate-500">Letzte:</span> <span className="font-bold">{new Date(formData.lastUvvInspection).toLocaleDateString('de-DE')}</span></div>}
-                            {formData.nextUvvInspection && <div><span className="text-slate-500">Nächste:</span> <span className="font-bold">{new Date(formData.nextUvvInspection).toLocaleDateString('de-DE')}</span></div>}
+                        )}
+                        {formData.vehicleRegistrationNumber && (
+                          <div>
+                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Fahrzeugbrief-Nr.</label>
+                            <p className="text-sm font-black text-slate-700 dark:text-slate-300">{formData.vehicleRegistrationNumber}</p>
                           </div>
-                        </div>
-                      )}
-                      {(formData.hasCeMarking || formData.hasGsMarking || formData.hasInspectionReport) && (
-                        <div>
-                          <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase mb-2">Zertifikate</label>
-                          <div className="flex flex-wrap gap-3">
-                            {formData.hasCeMarking && <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">✓ CE-Kennzeichnung</span>}
-                            {formData.hasGsMarking && <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">✓ GS-Zeichen</span>}
-                            {formData.hasInspectionReport && <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">✓ Prüfbericht</span>}
+                        )}
+                        {formData.firstRegistrationDate && (
+                          <div>
+                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Erstzulassung</label>
+                            <p className="text-sm font-black text-slate-700 dark:text-slate-300">{new Date(formData.firstRegistrationDate).toLocaleDateString('de-DE')}</p>
                           </div>
-                        </div>
-                      )}
+                        )}
+                        {formData.vehicleClass && (
+                          <div>
+                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Fahrzeugklasse</label>
+                            <p className="text-sm font-black text-slate-700 dark:text-slate-300">{formData.vehicleClass}</p>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  )}
 
-                  {/* Werkzeug-spezifisch */}
-                  {!editMode && infoSubTab === 'tool' && formData.type === AssetType.TOOL && (
-                    <div className="space-y-4">
-                      {formData.serialNumber && (
-                        <div>
-                          <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase mb-1">Seriennummer</label>
-                          <p className="text-xs font-black text-slate-700 dark:text-slate-300">{formData.serialNumber}</p>
+                    {(formData.engineDisplacement || formData.power || formData.fuelType || formData.transmission || formData.mileage) && (
+                      <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800">
+                        <h3 className="text-sm font-black text-slate-700 dark:text-slate-300 uppercase italic tracking-tighter mb-4">Technische Daten</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {formData.engineDisplacement && (
+                            <div>
+                              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Hubraum</label>
+                              <p className="text-sm font-black text-slate-700 dark:text-slate-300">{formData.engineDisplacement}</p>
+                            </div>
+                          )}
+                          {formData.power && (
+                            <div>
+                              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Leistung</label>
+                              <p className="text-sm font-black text-slate-700 dark:text-slate-300">{formData.power}</p>
+                            </div>
+                          )}
+                          {formData.fuelType && (
+                            <div>
+                              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Kraftstoff</label>
+                              <p className="text-sm font-black text-slate-700 dark:text-slate-300">{formData.fuelType}</p>
+                            </div>
+                          )}
+                          {formData.transmission && (
+                            <div>
+                              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Getriebe</label>
+                              <p className="text-sm font-black text-slate-700 dark:text-slate-300">{formData.transmission}</p>
+                            </div>
+                          )}
+                          {formData.mileage !== undefined && (
+                            <div>
+                              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Kilometerstand</label>
+                              <p className="text-sm font-black text-slate-700 dark:text-slate-300">{formData.mileage.toLocaleString('de-DE')} km</p>
+                            </div>
+                          )}
                         </div>
-                      )}
-                      {(formData.size || formData.material || formData.toolBoxSet) && (
-                        <div className="p-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800">
-                          <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase mb-2">Details</label>
-                          <div className="space-y-1 text-xs">
-                            {formData.size && <div><span className="text-slate-500">Größe:</span> <span className="font-bold">{formData.size}</span></div>}
-                            {formData.material && <div><span className="text-slate-500">Material:</span> <span className="font-bold">{formData.material}</span></div>}
-                            {formData.toolBoxSet && <div><span className="text-slate-500">Werkzeugkasten/Set:</span> <span className="font-bold">{formData.toolBoxSet}</span></div>}
+                      </div>
+                    )}
+
+                    {(formData.insuranceCompany || formData.insuranceNumber || formData.insuranceUntil || formData.vehicleTaxMonthly || formData.registrationAuthority) && (
+                      <div className="p-4 bg-emerald-50/50 dark:bg-emerald-900/10 rounded-xl border border-emerald-100 dark:border-emerald-900/30">
+                        <h3 className="text-sm font-black text-emerald-700 dark:text-emerald-400 uppercase italic tracking-tighter mb-4">Versicherung & Zulassung</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {formData.insuranceCompany && (
+                            <div>
+                              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Versicherungsgesellschaft</label>
+                              <p className="text-sm font-black text-slate-700 dark:text-slate-300">{formData.insuranceCompany}</p>
+                            </div>
+                          )}
+                          {formData.insuranceNumber && (
+                            <div>
+                              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Versicherungsnummer</label>
+                              <p className="text-sm font-black text-slate-700 dark:text-slate-300">{formData.insuranceNumber}</p>
+                            </div>
+                          )}
+                          {formData.insuranceUntil && (
+                            <div>
+                              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Versicherung bis</label>
+                              <p className="text-sm font-black text-slate-700 dark:text-slate-300">{new Date(formData.insuranceUntil).toLocaleDateString('de-DE')}</p>
+                            </div>
+                          )}
+                          {formData.vehicleTaxMonthly !== undefined && (
+                            <div>
+                              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">KFZ-Steuer (€/Monat)</label>
+                              <p className="text-sm font-black text-slate-700 dark:text-slate-300">{formData.vehicleTaxMonthly.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}</p>
+                            </div>
+                          )}
+                          {formData.registrationAuthority && (
+                            <div>
+                              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Zulassungsbehörde</label>
+                              <p className="text-sm font-black text-slate-700 dark:text-slate-300">{formData.registrationAuthority}</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {(formData.hasVehicleRegistration || formData.hasVehicleTitle || formData.hasServiceBook) && (
+                      <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800">
+                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Dokumente vorhanden</label>
+                        <div className="grid grid-cols-3 gap-3">
+                          {formData.hasVehicleRegistration && <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">✓ Fahrzeugschein</span>}
+                          {formData.hasVehicleTitle && <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">✓ Fahrzeugbrief</span>}
+                          {formData.hasServiceBook && <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">✓ Serviceheft</span>}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Tab: Maschine */}
+                {!editMode && infoSubTab === 'machine' && formData.type === AssetType.MACHINE && (
+                  <div className="space-y-6">
+                    <div className="p-4 bg-blue-50/50 dark:bg-blue-900/10 rounded-xl border border-blue-100 dark:border-blue-900/30">
+                      <h3 className="text-sm font-black text-blue-600 dark:text-blue-400 uppercase italic tracking-tighter mb-4">Identifikation</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {formData.serialNumber && (
+                          <div>
+                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Seriennummer</label>
+                            <p className="text-sm font-black text-slate-700 dark:text-slate-300">{formData.serialNumber}</p>
                           </div>
-                        </div>
-                      )}
-                      {(formData.lastCalibration || formData.nextCalibration) && (
-                        <div className="p-3 bg-emerald-50/50 dark:bg-emerald-900/10 rounded-xl border border-emerald-100 dark:border-emerald-900/30">
-                          <label className="block text-[9px] font-black text-emerald-600 dark:text-emerald-400 uppercase mb-2">Kalibrierung</label>
-                          <div className="space-y-1 text-xs">
-                            {formData.lastCalibration && <div><span className="text-slate-500">Letzte:</span> <span className="font-bold">{new Date(formData.lastCalibration).toLocaleDateString('de-DE')}</span></div>}
-                            {formData.nextCalibration && <div><span className="text-slate-500">Nächste:</span> <span className="font-bold">{new Date(formData.nextCalibration).toLocaleDateString('de-DE')}</span></div>}
+                        )}
+                        {formData.manufacturerNumber && (
+                          <div>
+                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Hersteller-Nr.</label>
+                            <p className="text-sm font-black text-slate-700 dark:text-slate-300">{formData.manufacturerNumber}</p>
                           </div>
-                        </div>
-                      )}
-                      {(formData.hasCeMarking || formData.hasGsMarking || formData.requiresCalibration) && (
-                        <div>
-                          <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase mb-2">Zertifikate</label>
-                          <div className="flex flex-wrap gap-3">
-                            {formData.hasCeMarking && <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">✓ CE-Kennzeichnung</span>}
-                            {formData.hasGsMarking && <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">✓ GS-Zeichen</span>}
-                            {formData.requiresCalibration && <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">✓ Kalibrierung erforderlich</span>}
+                        )}
+                        {formData.typeDesignation && (
+                          <div>
+                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Typbezeichnung</label>
+                            <p className="text-sm font-black text-slate-700 dark:text-slate-300">{formData.typeDesignation}</p>
                           </div>
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </div>
-                  )}
+
+                    {(formData.machinePower || formData.weight || formData.dimensions || formData.voltage || formData.currentConsumption || formData.operatingPressure || formData.rpm) && (
+                      <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800">
+                        <h3 className="text-sm font-black text-slate-700 dark:text-slate-300 uppercase italic tracking-tighter mb-4">Technische Daten</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {formData.machinePower && (
+                            <div>
+                              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Leistung</label>
+                              <p className="text-sm font-black text-slate-700 dark:text-slate-300">{formData.machinePower}</p>
+                            </div>
+                          )}
+                          {formData.weight && (
+                            <div>
+                              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Gewicht</label>
+                              <p className="text-sm font-black text-slate-700 dark:text-slate-300">{formData.weight}</p>
+                            </div>
+                          )}
+                          {formData.dimensions && (
+                            <div>
+                              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Abmessungen</label>
+                              <p className="text-sm font-black text-slate-700 dark:text-slate-300">{formData.dimensions}</p>
+                            </div>
+                          )}
+                          {formData.voltage && (
+                            <div>
+                              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Spannung</label>
+                              <p className="text-sm font-black text-slate-700 dark:text-slate-300">{formData.voltage}</p>
+                            </div>
+                          )}
+                          {formData.currentConsumption && (
+                            <div>
+                              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Stromverbrauch</label>
+                              <p className="text-sm font-black text-slate-700 dark:text-slate-300">{formData.currentConsumption}</p>
+                            </div>
+                          )}
+                          {formData.operatingPressure && (
+                            <div>
+                              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Betriebsdruck</label>
+                              <p className="text-sm font-black text-slate-700 dark:text-slate-300">{formData.operatingPressure}</p>
+                            </div>
+                          )}
+                          {formData.rpm && (
+                            <div>
+                              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Drehzahl</label>
+                              <p className="text-sm font-black text-slate-700 dark:text-slate-300">{formData.rpm}</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {(formData.lastUvvInspection || formData.nextUvvInspection || formData.hasCeMarking || formData.hasGsMarking || formData.hasInspectionReport) && (
+                      <div className="p-4 bg-emerald-50/50 dark:bg-emerald-900/10 rounded-xl border border-emerald-100 dark:border-emerald-900/30">
+                        <h3 className="text-sm font-black text-emerald-700 dark:text-emerald-400 uppercase italic tracking-tighter mb-4">Zertifikate & Prüfungen</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                          {formData.lastUvvInspection && (
+                            <div>
+                              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Letzte UVV-Prüfung</label>
+                              <p className="text-sm font-black text-slate-700 dark:text-slate-300">{new Date(formData.lastUvvInspection).toLocaleDateString('de-DE')}</p>
+                            </div>
+                          )}
+                          {formData.nextUvvInspection && (
+                            <div>
+                              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Nächste UVV-Prüfung</label>
+                              <p className="text-sm font-black text-slate-700 dark:text-slate-300">{new Date(formData.nextUvvInspection).toLocaleDateString('de-DE')}</p>
+                            </div>
+                          )}
+                        </div>
+                        {(formData.hasCeMarking || formData.hasGsMarking || formData.hasInspectionReport) && (
+                          <div className="grid grid-cols-3 gap-3">
+                            {formData.hasCeMarking && <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">✓ CE-Kennzeichnung</span>}
+                            {formData.hasGsMarking && <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">✓ GS-Zeichen</span>}
+                            {formData.hasInspectionReport && <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">✓ Prüfbericht</span>}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Tab: Werkzeug */}
+                {!editMode && infoSubTab === 'tool' && formData.type === AssetType.TOOL && (
+                  <div className="space-y-6">
+                    <div className="p-4 bg-blue-50/50 dark:bg-blue-900/10 rounded-xl border border-blue-100 dark:border-blue-900/30">
+                      <h3 className="text-sm font-black text-blue-600 dark:text-blue-400 uppercase italic tracking-tighter mb-4">Identifikation</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {formData.serialNumber && (
+                          <div>
+                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Seriennummer</label>
+                            <p className="text-sm font-black text-slate-700 dark:text-slate-300">{formData.serialNumber}</p>
+                          </div>
+                        )}
+                        {formData.articleNumber && (
+                          <div>
+                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Artikelnummer</label>
+                            <p className="text-sm font-black text-slate-700 dark:text-slate-300">{formData.articleNumber}</p>
+                          </div>
+                        )}
+                        {formData.modelNumber && (
+                          <div>
+                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Modellnummer</label>
+                            <p className="text-sm font-black text-slate-700 dark:text-slate-300">{formData.modelNumber}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {(formData.size || formData.material || formData.toolPower || formData.toolVoltage || formData.toolBoxSet) && (
+                      <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800">
+                        <h3 className="text-sm font-black text-slate-700 dark:text-slate-300 uppercase italic tracking-tighter mb-4">Technische Daten</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {formData.size && (
+                            <div>
+                              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Größe/Größen</label>
+                              <p className="text-sm font-black text-slate-700 dark:text-slate-300">{formData.size}</p>
+                            </div>
+                          )}
+                          {formData.material && (
+                            <div>
+                              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Material</label>
+                              <p className="text-sm font-black text-slate-700 dark:text-slate-300">{formData.material}</p>
+                            </div>
+                          )}
+                          {formData.toolPower && (
+                            <div>
+                              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Leistung</label>
+                              <p className="text-sm font-black text-slate-700 dark:text-slate-300">{formData.toolPower}</p>
+                            </div>
+                          )}
+                          {formData.toolVoltage && (
+                            <div>
+                              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Spannung</label>
+                              <p className="text-sm font-black text-slate-700 dark:text-slate-300">{formData.toolVoltage}</p>
+                            </div>
+                          )}
+                          {formData.toolBoxSet && (
+                            <div>
+                              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Werkzeugkasten/Set</label>
+                              <p className="text-sm font-black text-slate-700 dark:text-slate-300">{formData.toolBoxSet}</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {(formData.lastCalibration || formData.nextCalibration || formData.hasCeMarking || formData.hasGsMarking || formData.requiresCalibration) && (
+                      <div className="p-4 bg-emerald-50/50 dark:bg-emerald-900/10 rounded-xl border border-emerald-100 dark:border-emerald-900/30">
+                        <h3 className="text-sm font-black text-emerald-700 dark:text-emerald-400 uppercase italic tracking-tighter mb-4">Zertifikate & Kalibrierung</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                          {formData.lastCalibration && (
+                            <div>
+                              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Letzte Kalibrierung</label>
+                              <p className="text-sm font-black text-slate-700 dark:text-slate-300">{new Date(formData.lastCalibration).toLocaleDateString('de-DE')}</p>
+                            </div>
+                          )}
+                          {formData.nextCalibration && (
+                            <div>
+                              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Nächste Kalibrierung</label>
+                              <p className="text-sm font-black text-slate-700 dark:text-slate-300">{new Date(formData.nextCalibration).toLocaleDateString('de-DE')}</p>
+                            </div>
+                          )}
+                        </div>
+                        {(formData.hasCeMarking || formData.hasGsMarking || formData.requiresCalibration) && (
+                          <div className="grid grid-cols-3 gap-3">
+                            {formData.hasCeMarking && <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">✓ CE-Kennzeichnung</span>}
+                            {formData.hasGsMarking && <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">✓ GS-Zeichen</span>}
+                            {formData.requiresCalibration && <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">✓ Kalibrierung erforderlich</span>}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                   {/* Edit Mode: Alle Felder bearbeitbar */}
                   {editMode && (
