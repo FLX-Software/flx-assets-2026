@@ -33,6 +33,9 @@ $$;
 
 -- Erlaube nur Admins, diese Funktion aufzurufen
 -- Prüfe ob der aufrufende User Admin ist
+-- WICHTIG: Funktion zuerst droppen, da Parametername geändert wird
+DROP FUNCTION IF EXISTS public.delete_user_completely_secure(uuid);
+
 CREATE OR REPLACE FUNCTION public.delete_user_completely_secure(target_user_id uuid)
 RETURNS void
 LANGUAGE plpgsql
