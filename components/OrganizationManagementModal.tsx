@@ -128,8 +128,13 @@ const OrganizationManagementModal: React.FC<OrganizationManagementModalProps> = 
   };
 
   const handleUpdateOrganization = async (org: Organization) => {
+    if (!formData.name.trim()) {
+      onShowNotification('Bitte geben Sie einen Namen ein', 'error');
+      return;
+    }
+
     try {
-      const updated = await updateOrganization(org.id, { name: formData.name, slug: formData.slug });
+      const updated = await updateOrganization(org.id, { name: formData.name.trim(), slug: formData.slug.trim() || undefined });
       setOrganizations(organizations.map(o => o.id === org.id ? updated : o));
       setEditingOrg(null);
       setFormData({ name: '', slug: '' });
@@ -150,6 +155,17 @@ const OrganizationManagementModal: React.FC<OrganizationManagementModalProps> = 
     } catch (error: any) {
       console.error('Fehler beim Deaktivieren:', error);
       onShowNotification(error.message || 'Fehler beim Deaktivieren', 'error');
+    }
+  };
+
+  const handleActivateOrganization = async (orgId: string) => {
+    try {
+      await updateOrganization(orgId, { is_active: true });
+      setOrganizations(organizations.map(o => o.id === orgId ? { ...o, is_active: true } : o));
+      onShowNotification('Organisation wurde aktiviert', 'success');
+    } catch (error: any) {
+      console.error('Fehler beim Aktivieren:', error);
+      onShowNotification(error.message || 'Fehler beim Aktivieren', 'error');
     }
   };
 
@@ -270,22 +286,44 @@ const OrganizationManagementModal: React.FC<OrganizationManagementModalProps> = 
                     </div>
                     <div className="flex items-center gap-2">
                       <button 
-                        onClick={() => startEdit(org)}
-                        className="p-3 text-slate-400 hover:text-blue-500 transition-all bg-slate-50 dark:bg-slate-900 rounded-xl"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          startEdit(org);
+                        }}
+                        className="p-3 text-slate-400 hover:text-blue-500 transition-all bg-slate-50 dark:bg-slate-900 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-900/20"
                         title="Bearbeiten"
                       >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                         </svg>
                       </button>
-                      {org.is_active && (
+                      {org.is_active ? (
                         <button 
-                          onClick={() => handleDeactivateOrganization(org.id)}
-                          className="p-3 text-slate-300 hover:text-rose-500 transition-all bg-slate-50 dark:bg-slate-900 rounded-xl"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleDeactivateOrganization(org.id);
+                          }}
+                          className="p-3 text-slate-300 hover:text-rose-500 transition-all bg-slate-50 dark:bg-slate-900 rounded-xl hover:bg-rose-50 dark:hover:bg-rose-900/20"
                           title="Deaktivieren"
                         >
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                          </svg>
+                        </button>
+                      ) : (
+                        <button 
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleActivateOrganization(org.id);
+                          }}
+                          className="p-3 text-slate-300 hover:text-emerald-500 transition-all bg-slate-50 dark:bg-slate-900 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
+                          title="Aktivieren"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
                           </svg>
                         </button>
                       )}
