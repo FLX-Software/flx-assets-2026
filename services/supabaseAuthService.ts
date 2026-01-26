@@ -52,47 +52,81 @@ export async function signUp(
     const userId = authData.user.id;
     console.log('✅ signUp: Auth-User erstellt, ID:', userId);
 
-    // 2. Profil in profiles-Tabelle anlegen
-    // WICHTIG: Kurze Verzögerung, damit der User in auth.users vollständig verfügbar ist
-    console.log('🔵 signUp: Warte kurz, damit User in auth.users verfügbar ist...');
-    await new Promise(resolve => setTimeout(resolve, 500)); // 500ms Verzögerung
+    // 2. Profil wird automatisch vom Trigger erstellt (create-profile-trigger.sql)
+    // Warte kurz, damit der Trigger das Profil erstellt hat
+    console.log('🔵 signUp: Warte auf automatische Profil-Erstellung durch Trigger...');
+    await new Promise(resolve => setTimeout(resolve, 1000)); // 1 Sekunde warten
 
-    console.log('🔵 signUp: Erstelle Profil...');
+    // Prüfe ob Profil existiert, falls nicht: manuell erstellen
+    console.log('🔵 signUp: Prüfe ob Profil existiert...');
+    const { data: existingProfile, error: checkError } = await supabase
+      .from('profiles')
+      .select('id, full_name')
+      .eq('id', userId)
+      .single();
+
+    if (checkError && checkError.code !== 'PGRST116') { // PGRST116 = "not found", das ist OK
+      console.error('❌ signUp: Fehler beim Prüfen des Profils:', checkError);
+    }
+
+    if (!existingProfile) {
+      // Profil existiert nicht, erstelle es manuell
+      console.log('🔵 signUp: Profil existiert nicht, erstelle es manuell...');
+      const nameParts = fullName.split(' ');
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
+
+      // Retry-Logik für Profil-Erstellung (max. 3 Versuche)
+      let profileError = null;
+      let retries = 0;
+      const maxRetries = 3;
+      
+      while (retries < maxRetries) {
+        const { error } = await supabase
+          .from('profiles')
+          .insert({
+            id: userId,
+            full_name: fullName,
+          });
+
+        if (!error) {
+          console.log('✅ signUp: Profil manuell erstellt (Versuch', retries + 1, ')');
+          break;
+        }
+
+        // 409 = Conflict (Profil existiert bereits) - das ist OK!
+        if (error.code === '23505' || error.message.includes('duplicate') || error.message.includes('already exists')) {
+          console.log('✅ signUp: Profil existiert bereits (wurde vom Trigger erstellt)');
+          break;
+        }
+
+        profileError = error;
+        retries++;
+        
+        if (retries < maxRetries) {
+          console.log(`⚠️ signUp: Profil-Erstellung fehlgeschlagen (Versuch ${retries}), warte und versuche erneut...`);
+          await new Promise(resolve => setTimeout(resolve, 1000 * retries)); // Exponential backoff
+        }
+      }
+
+      if (profileError && profileError.code !== '23505') {
+        console.error('❌ signUp: Profil-Erstellung fehlgeschlagen nach', maxRetries, 'Versuchen:', profileError);
+        return { success: false, error: `Profil konnte nicht erstellt werden: ${profileError.message}` };
+      }
+    } else {
+      console.log('✅ signUp: Profil existiert bereits (wurde vom Trigger erstellt)');
+      // Aktualisiere full_name falls nötig
+      if (existingProfile.full_name !== fullName) {
+        await supabase
+          .from('profiles')
+          .update({ full_name: fullName })
+          .eq('id', userId);
+      }
+    }
+
     const nameParts = fullName.split(' ');
     const firstName = nameParts[0] || '';
     const lastName = nameParts.slice(1).join(' ') || '';
-
-    // Retry-Logik für Profil-Erstellung (max. 3 Versuche)
-    let profileError = null;
-    let retries = 0;
-    const maxRetries = 3;
-    
-    while (retries < maxRetries) {
-      const { error } = await supabase
-        .from('profiles')
-        .insert({
-          id: userId,
-          full_name: fullName,
-        });
-
-      if (!error) {
-        console.log('✅ signUp: Profil erstellt (Versuch', retries + 1, ')');
-        break;
-      }
-
-      profileError = error;
-      retries++;
-      
-      if (retries < maxRetries) {
-        console.log(`⚠️ signUp: Profil-Erstellung fehlgeschlagen (Versuch ${retries}), warte und versuche erneut...`);
-        await new Promise(resolve => setTimeout(resolve, 1000 * retries)); // Exponential backoff
-      }
-    }
-
-    if (profileError) {
-      console.error('❌ signUp: Profil-Erstellung fehlgeschlagen nach', maxRetries, 'Versuchen:', profileError);
-      return { success: false, error: `Profil konnte nicht erstellt werden: ${profileError.message}` };
-    }
 
     // 3. Membership anlegen
     console.log('🔵 signUp: Erstelle Membership...', { organizationId, userId, role });
