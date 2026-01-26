@@ -427,7 +427,7 @@ export async function validateCSVImport(
         model: result.asset.model || '',
         type: result.asset.type || AssetType.TOOL, // Fallback für Kategorie
         purchaseYear: result.asset.purchaseYear ?? new Date().getFullYear(), // Nur wenn undefined
-        warrantyUntil: result.asset.warrantyUntil || '',
+        warrantyUntil: result.asset.warrantyUntil || undefined, // Nicht als leerer String setzen
         condition: result.asset.condition ?? 5, // Nur wenn undefined
         imageUrl: 'https://picsum.photos/seed/newasset/400/300',
         qrCode: result.asset.qrCode || '',
