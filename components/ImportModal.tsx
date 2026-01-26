@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Asset } from '../types';
 import { validateCSVImport, generateImportTemplate, ImportResult, ImportError } from '../services/importService';
-import { createAsset, createAssetsBulk } from '../services/supabaseAssetService';
+import { createAsset, createAssetsBulk, checkQRCodeExists, generateUniqueQRCode } from '../services/supabaseAssetService';
 
 interface ImportModalProps {
   onClose: () => void;
@@ -76,14 +76,35 @@ const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImportComplete, or
       console.log(`📦 Batch ${batchIndex + 1}/${batches.length}: Starte Import von ${batch.length} Assets...`);
       
       try {
-        // Füge organizationId zu allen Assets hinzu
-        const assetsWithOrg = batch.map(asset => ({
-          ...asset,
-          organizationId,
-        }));
+        // Prüfe QR-Codes auf globale Duplikate und generiere neue falls nötig
+        console.log(`🔍 Prüfe QR-Codes auf globale Duplikate...`);
+        const assetsWithOrg = await Promise.all(
+          batch.map(async (asset) => {
+            const originalQRCode = asset.qrCode;
+            let finalQRCode = originalQRCode;
+            
+            // Prüfe, ob QR-Code bereits global existiert
+            if (await checkQRCodeExists(originalQRCode)) {
+              console.log(`⚠️ QR-Code "${originalQRCode}" existiert bereits global, generiere neuen...`);
+              finalQRCode = await generateUniqueQRCode(originalQRCode);
+              console.log(`✅ Neuer QR-Code generiert: "${finalQRCode}"`);
+            }
+            
+            return {
+              ...asset,
+              organizationId,
+              qrCode: finalQRCode,
+              // Speichere Original-QR-Code für Warnung falls geändert
+              _originalQRCode: originalQRCode !== finalQRCode ? originalQRCode : undefined,
+            };
+          })
+        );
+        
+        // Entferne _originalQRCode vor dem Insert (ist nur für Logging)
+        const assetsForInsert = assetsWithOrg.map(({ _originalQRCode, ...asset }) => asset);
         
         // Timeout für Bulk-Insert (30 Sekunden pro Batch)
-        const bulkInsertPromise = createAssetsBulk(assetsWithOrg, organizationId);
+        const bulkInsertPromise = createAssetsBulk(assetsForInsert, organizationId);
         const timeoutPromise = new Promise<{ success: Asset[]; failed: Array<{ asset: Asset; error: string }> }>((_, reject) => {
           setTimeout(() => reject(new Error('Bulk-Insert Timeout (30s)')), 30000);
         });
@@ -106,6 +127,13 @@ const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImportComplete, or
           current: prev.current + result.success.length + result.failed.length 
         }));
         
+        // Log QR-Code-Änderungen
+        assetsWithOrg.forEach((asset) => {
+          if ((asset as any)._originalQRCode) {
+            console.warn(`⚠️ QR-Code geändert für ${asset.brand} ${asset.model}: "${(asset as any)._originalQRCode}" → "${asset.qrCode}"`);
+          }
+        });
+        
         // Log Fehler falls vorhanden
         if (result.failed.length > 0) {
           console.warn(`⚠️ Batch ${batchIndex + 1}: ${result.failed.length} Assets fehlgeschlagen`);
@@ -123,9 +151,19 @@ const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImportComplete, or
           const asset = batch[assetIndex];
           try {
             console.log(`  📝 Importiere Asset ${assetIndex + 1}/${batch.length}: ${asset.brand} ${asset.model}...`);
+            
+            // Prüfe QR-Code auf globale Duplikate
+            let finalQRCode = asset.qrCode;
+            if (await checkQRCodeExists(asset.qrCode)) {
+              console.log(`  ⚠️ QR-Code "${asset.qrCode}" existiert bereits, generiere neuen...`);
+              finalQRCode = await generateUniqueQRCode(asset.qrCode);
+              console.log(`  ✅ Neuer QR-Code: "${finalQRCode}"`);
+            }
+            
             const assetWithOrg: Asset = {
               ...asset,
               organizationId,
+              qrCode: finalQRCode,
             };
             await createAsset(assetWithOrg, organizationId);
             successCount++;

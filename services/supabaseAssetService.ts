@@ -49,6 +49,42 @@ export async function fetchAsset(assetId: string): Promise<Asset | null> {
 }
 
 /**
+ * Prüft, ob ein QR-Code bereits global existiert (über alle Organisationen)
+ */
+export async function checkQRCodeExists(qrCode: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('assets')
+    .select('id')
+    .eq('qr_string', qrCode)
+    .limit(1)
+    .single();
+
+  // Wenn Daten gefunden wurden, existiert der QR-Code bereits
+  return !error && !!data;
+}
+
+/**
+ * Generiert einen eindeutigen QR-Code
+ */
+export async function generateUniqueQRCode(baseQRCode?: string): Promise<string> {
+  let qrCode = baseQRCode || `QR_${Date.now()}_${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
+  let attempts = 0;
+  const maxAttempts = 10;
+
+  while (await checkQRCodeExists(qrCode) && attempts < maxAttempts) {
+    qrCode = `QR_${Date.now()}_${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
+    attempts++;
+  }
+
+  if (attempts >= maxAttempts) {
+    // Fallback: Verwende Timestamp + Random für absolute Eindeutigkeit
+    qrCode = `QR_${Date.now()}_${Math.random().toString(36).substring(2, 15).toUpperCase()}`;
+  }
+
+  return qrCode;
+}
+
+/**
  * Erstellt ein neues Asset
  */
 export async function createAsset(asset: Asset, organizationId: string): Promise<Asset> {
