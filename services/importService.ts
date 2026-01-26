@@ -419,22 +419,23 @@ export async function validateCSVImport(
     
     if (result.asset) {
       // Erstelle vollständiges Asset-Objekt
+      // Nur minimale Standard-Werte für Pflichtfelder, Rest bleibt leer wenn nicht vorhanden
       const asset: Asset = {
         id: `a-${Date.now()}-${index}`,
         organizationId: '', // Wird beim Import gesetzt
         brand: result.asset.brand || '',
         model: result.asset.model || '',
-        type: result.asset.type || AssetType.TOOL,
-        purchaseYear: result.asset.purchaseYear || new Date().getFullYear(),
+        type: result.asset.type || AssetType.TOOL, // Fallback für Kategorie
+        purchaseYear: result.asset.purchaseYear ?? new Date().getFullYear(), // Nur wenn undefined
         warrantyUntil: result.asset.warrantyUntil || '',
-        condition: result.asset.condition || 5,
+        condition: result.asset.condition ?? 5, // Nur wenn undefined
         imageUrl: 'https://picsum.photos/seed/newasset/400/300',
         qrCode: result.asset.qrCode || '',
         currentUserId: null,
-        status: result.asset.status || 'available',
-        maintenanceIntervalMonths: result.asset.maintenanceIntervalMonths || 12,
+        status: result.asset.status || 'available', // Status muss gesetzt sein
+        maintenanceIntervalMonths: result.asset.maintenanceIntervalMonths ?? 12, // Nur wenn undefined
         repairHistory: [],
-        ...result.asset,
+        ...result.asset, // Überschreibt die obigen Werte wenn in result.asset vorhanden
       };
       validAssets.push(asset);
     }
