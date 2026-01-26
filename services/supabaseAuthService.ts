@@ -29,7 +29,7 @@ export async function signUp(
     try {
       console.log('🔵 signUp: Prüfe ob User bereits existiert...');
       
-      // RPC-Aufruf mit Timeout
+      // RPC-Aufruf mit Timeout (erhöht auf 5s)
       const restorePromise = supabase.rpc('restore_user_if_exists', {
         user_email: email,
         full_name: fullName,
@@ -38,7 +38,7 @@ export async function signUp(
       });
       
       const restoreTimeout = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('restore_user_if_exists Timeout (3s)')), 3000)
+        setTimeout(() => reject(new Error('restore_user_if_exists Timeout (5s)')), 5000)
       );
       
       const restoreResult = await Promise.race([restorePromise, restoreTimeout]) as any;
@@ -123,28 +123,46 @@ export async function signUp(
             authError.message?.includes('already exists') ||
             authError.message?.includes('User already registered')) {
           console.log('⚠️ signUp: User bereits registriert, versuche Wiederherstellung...');
-          // Versuche erneut Wiederherstellung
+          // Versuche erneut Wiederherstellung (mit Timeout)
           try {
-            const { data: restoreData2, error: restoreError2 } = await supabase.rpc('restore_user_if_exists', {
+            const restorePromise2 = supabase.rpc('restore_user_if_exists', {
               user_email: email,
               full_name: fullName,
               organization_id: organizationId,
               user_role: role
             });
             
+            const restoreTimeout2 = new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('restore_user_if_exists Timeout (5s)')), 5000)
+            );
+            
+            const restoreResult2 = await Promise.race([restorePromise2, restoreTimeout2]) as any;
+            const restoreData2 = restoreResult2?.data || null;
+            const restoreError2 = restoreResult2?.error || null;
+            
             if (!restoreError2 && restoreData2) {
               userId = restoreData2;
+              wasRestored = true;
               console.log('✅ signUp: User erfolgreich wiederhergestellt nach signUp-Fehler');
-            } else {
+            } else if (restoreError2?.message?.includes('existiert bereits und ist aktiv')) {
               return { 
                 success: false, 
-                error: 'Ein Benutzer mit dieser E-Mail-Adresse existiert bereits. Bitte löschen Sie den Benutzer vollständig aus Supabase Auth, um ihn erneut anzulegen.' 
+                error: 'Ein Benutzer mit dieser E-Mail-Adresse existiert bereits und ist aktiv.' 
+              };
+            } else {
+              // Wenn Wiederherstellung fehlschlägt, versuche User direkt zu finden und Profil/Membership zu erstellen
+              console.log('⚠️ signUp: Wiederherstellung fehlgeschlagen, versuche direkten Zugriff auf auth.users...');
+              // Da wir nicht direkt auf auth.users zugreifen können, müssen wir dem Admin sagen, dass er den User löschen soll
+              return { 
+                success: false, 
+                error: 'Ein Benutzer mit dieser E-Mail-Adresse existiert bereits in Supabase Auth. Bitte löschen Sie den Benutzer vollständig aus Supabase Auth (Authentication → Users), um ihn erneut anzulegen.' 
               };
             }
           } catch (restoreException2: any) {
+            console.error('❌ signUp: Wiederherstellung fehlgeschlagen:', restoreException2);
             return { 
               success: false, 
-              error: 'Ein Benutzer mit dieser E-Mail-Adresse existiert bereits. Bitte löschen Sie den Benutzer vollständig aus Supabase Auth, um ihn erneut anzulegen.' 
+              error: 'Ein Benutzer mit dieser E-Mail-Adresse existiert bereits in Supabase Auth. Bitte löschen Sie den Benutzer vollständig aus Supabase Auth (Authentication → Users), um ihn erneut anzulegen.' 
             };
           }
         } else {
