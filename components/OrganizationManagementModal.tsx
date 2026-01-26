@@ -33,18 +33,57 @@ const OrganizationManagementModal: React.FC<OrganizationManagementModalProps> = 
       setOrganizations(orgs);
       
       // Lade Statistiken für jede Organisation
+      // Verwende normale SELECT-Queries statt HEAD-Requests für bessere Kompatibilität
       const stats: Record<string, { assets: number; users: number }> = {};
       for (const org of orgs) {
         try {
+          // Verwende normale SELECT-Queries (nur IDs) für bessere RLS-Kompatibilität
           const [assetsResult, membersResult] = await Promise.all([
-            supabase.from('assets').select('id', { count: 'exact', head: true }).eq('organization_id', org.id),
-            supabase.from('organization_members').select('id', { count: 'exact', head: true }).eq('organization_id', org.id).eq('is_active', true)
+            supabase
+              .from('assets')
+              .select('id', { count: 'exact' })
+              .eq('organization_id', org.id)
+              .limit(0), // Keine Daten zurückgeben, nur Count
+            supabase
+              .from('organization_members')
+              .select('id', { count: 'exact' })
+              .eq('organization_id', org.id)
+              .eq('is_active', true)
+              .limit(0) // Keine Daten zurückgeben, nur Count
           ]);
+          
+          // Prüfe auf Fehler
+          if (assetsResult.error) {
+            console.warn(`⚠️ Fehler beim Laden der Asset-Statistik für Org ${org.name}:`, assetsResult.error);
+          }
+          if (membersResult.error) {
+            console.warn(`⚠️ Fehler beim Laden der User-Statistik für Org ${org.name}:`, membersResult.error);
+            // Fallback: Versuche ohne is_active Filter
+            try {
+              const fallbackResult = await supabase
+                .from('organization_members')
+                .select('id', { count: 'exact' })
+                .eq('organization_id', org.id)
+                .limit(0);
+              
+              if (!fallbackResult.error) {
+                stats[org.id] = {
+                  assets: assetsResult.count || 0,
+                  users: fallbackResult.count || 0
+                };
+                continue;
+              }
+            } catch (fallbackError) {
+              console.error('⚠️ Auch Fallback fehlgeschlagen:', fallbackError);
+            }
+          }
+          
           stats[org.id] = {
             assets: assetsResult.count || 0,
             users: membersResult.count || 0
           };
         } catch (error) {
+          console.error(`❌ Fehler beim Laden der Statistiken für Org ${org.name}:`, error);
           stats[org.id] = { assets: 0, users: 0 };
         }
       }
