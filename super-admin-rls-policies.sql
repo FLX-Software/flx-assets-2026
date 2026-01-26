@@ -95,8 +95,7 @@ CREATE POLICY "super_admin_update_memberships"
 -- ============================================================
 
 -- Super-Admin kann Assets in jeder Organisation sehen
--- (wird durch bestehende Policies abgedeckt, wenn Super-Admin Admin in Org ist)
--- Zusätzliche Policy für Super-Admin, der nicht explizit in Org ist:
+-- WICHTIG: Diese Policy wird zusätzlich zu bestehenden Policies angewendet (OR-Logik)
 CREATE POLICY "super_admin_read_all_assets"
   ON public.assets
   FOR SELECT

@@ -332,6 +332,20 @@ const App: React.FC = () => {
     }
   }, [notification]);
 
+  // Schließe Organisation-Dropdown beim Klick außerhalb
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (isOrgDropdownOpen) {
+        const target = event.target as HTMLElement;
+        if (!target.closest('.org-dropdown-container')) {
+          setIsOrgDropdownOpen(false);
+        }
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isOrgDropdownOpen]);
+
   if (isLoading && !currentUser) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-[#010409]">
@@ -398,7 +412,7 @@ const App: React.FC = () => {
 
             {/* Organisation-Dropdown (nur wenn mehrere Organisationen verfügbar) */}
             {availableOrganizations.length > 1 && (
-              <div className="relative">
+              <div className="relative org-dropdown-container">
                 <button
                   onClick={() => setIsOrgDropdownOpen(!isOrgDropdownOpen)}
                   className="flex items-center gap-2 px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all text-sm font-bold"
