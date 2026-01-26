@@ -23,6 +23,9 @@ export async function signUp(
     // 0. Prüfe ob User bereits in auth.users existiert (z.B. nach Löschung)
     // Falls ja, stelle ihn wieder her statt neu anzulegen
     let userId: string | null = null;
+    let wasRestored = false;
+    let authData: any = null;
+    
     try {
       const { data: restoreData, error: restoreError } = await supabase.rpc('restore_user_if_exists', {
         user_email: email,
@@ -34,6 +37,7 @@ export async function signUp(
       if (!restoreError && restoreData) {
         console.log('✅ signUp: User existiert bereits in auth.users, stelle wieder her...', restoreData);
         userId = restoreData;
+        wasRestored = true;
         // Passwort kann nicht aktualisiert werden ohne Service Role, aber User kann sich mit altem Passwort einloggen
         // Oder: Admin muss Passwort manuell zurücksetzen
       }
@@ -50,9 +54,9 @@ export async function signUp(
     }
     
     // 1. User in Supabase Auth anlegen (nur wenn nicht wiederhergestellt)
-    if (!userId) {
+    if (!wasRestored) {
       console.log('🔵 signUp: Erstelle Auth-User...');
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      const authResult = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -63,6 +67,9 @@ export async function signUp(
         },
       });
 
+      authData = authResult.data;
+      const authError = authResult.error;
+      
       console.log('🔵 signUp: Auth-Response:', { 
         hasUser: !!authData?.user, 
         hasError: !!authError,
@@ -125,7 +132,6 @@ export async function signUp(
 
     // 2. Profil und Membership erstellen (nur wenn User nicht wiederhergestellt wurde)
     // Wenn User wiederhergestellt wurde, sind Profil und Membership bereits erstellt
-    const wasRestored = userId !== null && !authData?.user; // userId wurde von restore_user_if_exists gesetzt
     
     if (!wasRestored) {
       // Profil wird automatisch vom Trigger erstellt (create-profile-trigger.sql)
