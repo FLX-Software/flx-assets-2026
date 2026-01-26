@@ -360,7 +360,8 @@ const App: React.FC = () => {
         {currentUser.role === UserRole.ADMIN ? (
           <AdminDashboard 
             assets={assets} 
-            users={users} 
+            users={users}
+            loans={history}
             onShowDetails={setSelectedAsset} 
             onAddAsset={() => setIsCreateModalOpen(true)}
             onManageUsers={() => setIsUserMgmtOpen(true)}

@@ -55,35 +55,35 @@ const AssetCard: React.FC<AssetCardProps> = ({ asset, assignedUser, onAction, ac
         </div>
       </div>
       
-      <div className="p-5 flex-grow">
-        <div className="flex justify-between items-start mb-2">
-          <div>
-            <h3 className="font-black text-lg leading-tight text-slate-900 dark:text-white uppercase italic tracking-tighter">
+      <div className="p-4 flex-grow flex flex-col">
+        <div className="flex justify-between items-start mb-3">
+          <div className="flex-1 min-w-0">
+            <h3 className="font-black text-base leading-tight text-slate-900 dark:text-white uppercase italic tracking-tighter truncate">
               {asset.brand} <span className="text-blue-600">{asset.model}</span>
             </h3>
           </div>
-          <div className={`w-3 h-3 rounded-full mt-1.5 shadow-sm ${conditionColor(asset.condition)}`} title={`Zustand: ${asset.condition}/5`} />
+          <div className={`w-2.5 h-2.5 rounded-full mt-1.5 ml-2 flex-shrink-0 shadow-sm ${conditionColor(asset.condition)}`} title={`Zustand: ${asset.condition}/5`} />
         </div>
         
-        <div className="space-y-2 mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
-          <div className="flex justify-between items-center text-[11px] font-bold">
-            <span className="text-slate-400 dark:text-slate-500 uppercase tracking-wider">Garantie bis</span>
+        <div className="space-y-2 mt-auto pt-3 border-t border-slate-100 dark:border-slate-800">
+          <div className="flex justify-between items-center text-[10px] font-bold">
+            <span className="text-slate-400 dark:text-slate-500 uppercase tracking-wider">Garantie</span>
             <span className="text-slate-700 dark:text-slate-300">{asset.warrantyUntil}</span>
           </div>
           {assignedUser && (
             <div className="flex justify-between items-center">
-              <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Benutzer</span>
-              <span className="text-xs font-black text-blue-700 dark:text-blue-400 uppercase italic">{assignedUser.name.split(' ')[0]}</span>
+              <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Benutzer</span>
+              <span className="text-[10px] font-black text-blue-700 dark:text-blue-400 uppercase italic">{assignedUser.name.split(' ')[0]}</span>
             </div>
           )}
         </div>
       </div>
 
       {onAction && actionLabel && (
-        <div className="p-5 pt-0">
+        <div className="px-4 pb-4">
           <button 
             onClick={(e) => { e.stopPropagation(); onAction(asset); }}
-            className="w-full py-3.5 bg-slate-900 dark:bg-slate-800 hover:bg-blue-600 dark:hover:bg-blue-600 text-white font-black rounded-xl transition-all flex items-center justify-center gap-2 uppercase text-sm tracking-tighter italic"
+            className="w-full py-2.5 bg-slate-900 dark:bg-slate-800 hover:bg-blue-600 dark:hover:bg-blue-600 text-white font-black rounded-lg transition-all flex items-center justify-center gap-2 uppercase text-xs tracking-tighter italic"
           >
             {actionLabel}
           </button>

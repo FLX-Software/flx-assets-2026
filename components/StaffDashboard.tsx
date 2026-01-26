@@ -15,29 +15,36 @@ const StaffDashboard: React.FC<StaffDashboardProps> = ({ assets, currentUser, on
   const myAssets = assets.filter(a => a.currentUserId === currentUser.id);
 
   return (
-    <div className="p-4 pb-32">
-      <header className="mb-10 mt-6 text-center md:text-left">
-        <span className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-[0.2em] mb-3 inline-block">
-          Team Member
-        </span>
-        <h1 className="text-4xl font-black text-slate-900 dark:text-white mt-2 tracking-tight italic uppercase">
-          Willkommen, <span className="text-blue-600">{currentUser.name.split(' ')[0]}</span>
-        </h1>
-        <p className="text-slate-500 dark:text-slate-400 font-medium mt-1">Status: {myAssets.length} Assets aktiv im Besitz.</p>
+    <div className="p-4 md:p-6 lg:p-8 pb-24">
+      {/* Header */}
+      <header className="mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mb-1 uppercase italic tracking-tighter">
+              Willkommen, <span className="text-blue-600">{currentUser.name.split(' ')[0]}</span>
+            </h1>
+            <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">
+              {myAssets.length} {myAssets.length === 1 ? 'Asset' : 'Assets'} aktiv im Besitz
+            </p>
+          </div>
+        </div>
       </header>
 
+      {/* My Assets Section */}
       <section>
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-lg font-bold text-slate-800 dark:text-slate-200 flex items-center gap-3">
-            <span className="w-2 h-6 bg-blue-500 rounded-full"></span>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-black text-slate-800 dark:text-slate-200 flex items-center gap-2 uppercase italic tracking-tighter">
+            <span className="w-1.5 h-5 bg-blue-500 rounded-full"></span>
             Meine Ausrüstung
           </h2>
           {myAssets.length > 0 && (
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{myAssets.length} Items</span>
+            <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-full">
+              {myAssets.length}
+            </span>
           )}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
           {myAssets.length > 0 ? (
             myAssets.map(asset => (
               <AssetCard 
@@ -66,16 +73,19 @@ const StaffDashboard: React.FC<StaffDashboardProps> = ({ assets, currentUser, on
         </div>
       </section>
 
-      {/* FLX Floating Action Button */}
-      <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-40">
+      {/* Floating Action Button */}
+      <div className="fixed bottom-6 right-6 z-40">
         <button 
           onClick={onStartScan}
-          className="bg-[#0091FF] hover:bg-blue-600 text-white px-10 py-5 rounded-2xl shadow-[0_10px_40px_rgba(0,145,255,0.4)] flex items-center gap-4 font-black text-xl italic tracking-tighter border-2 border-white/20 transition-all active:scale-95 group"
+          className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-4 rounded-2xl shadow-[0_8px_24px_rgba(37,99,235,0.4)] flex items-center gap-3 font-black text-sm uppercase italic tracking-tighter transition-all active:scale-95 group"
         >
-          <div className="bg-white/20 p-1 rounded-lg group-hover:rotate-90 transition-transform">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M12 4v16m8-8H4"></path></svg>
+          <div className="bg-white/20 p-1.5 rounded-lg group-hover:rotate-90 transition-transform">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+            </svg>
           </div>
-          SCAN ASSET
+          <span className="hidden sm:inline">Scan Asset</span>
+          <span className="sm:hidden">Scan</span>
         </button>
       </div>
     </div>
