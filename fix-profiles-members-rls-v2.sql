@@ -114,23 +114,53 @@ CREATE POLICY "users_read_own_memberships"
     OR user_id = auth.uid()
   );
 
+-- Funktion um zu prüfen ob User Mitglied einer Organisation ist (ohne Rekursion)
+CREATE OR REPLACE FUNCTION public.is_member_of_organization(user_id uuid, org_id uuid)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+STABLE
+AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1
+    FROM public.organization_members om
+    WHERE om.user_id = is_member_of_organization.user_id
+      AND om.organization_id = is_member_of_organization.org_id
+      AND om.is_active = true
+  );
+END;
+$$;
+
 -- User können alle Mitglieder ihrer Organisation sehen
--- WICHTIG: Verwendet self-join, aber nur auf derselben Tabelle, keine Rekursion
+-- WICHTIG: Verwendet SECURITY DEFINER Funktion um Rekursion zu vermeiden
 CREATE POLICY "users_read_org_members"
   ON public.organization_members
   FOR SELECT
   USING (
     auth.role() = 'service_role'
     OR user_id = auth.uid() -- Eigene Membership (bereits durch users_read_own_memberships abgedeckt)
-    OR EXISTS (
-      -- Prüfe ob der aktuelle User Mitglied derselben Organisation ist
-      SELECT 1
-      FROM public.organization_members om_self
-      WHERE om_self.organization_id = organization_members.organization_id
-        AND om_self.user_id = auth.uid()
-        AND om_self.is_active = true
-    )
+    OR public.is_member_of_organization(auth.uid(), organization_members.organization_id) -- Gleiche Organisation
   );
+
+-- Funktion um zu prüfen ob User Admin einer Organisation ist (ohne Rekursion)
+CREATE OR REPLACE FUNCTION public.is_admin_of_organization(user_id uuid, org_id uuid)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+STABLE
+AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1
+    FROM public.organization_members om
+    WHERE om.user_id = is_admin_of_organization.user_id
+      AND om.organization_id = is_admin_of_organization.org_id
+      AND om.role = 'admin'
+      AND om.is_active = true
+  );
+END;
+$$;
 
 -- Admins können neue Memberships in ihrer Organisation erstellen
 CREATE POLICY "admins_insert_org_members"
@@ -139,15 +169,7 @@ CREATE POLICY "admins_insert_org_members"
   WITH CHECK (
     auth.role() = 'service_role'
     OR user_id = auth.uid() -- User kann sich selbst hinzufügen (für Sign-Up)
-    OR EXISTS (
-      -- Prüfe ob der aktuelle User Admin in der Organisation ist
-      SELECT 1
-      FROM public.organization_members om
-      WHERE om.organization_id = organization_members.organization_id
-        AND om.user_id = auth.uid()
-        AND om.role = 'admin'
-        AND om.is_active = true
-    )
+    OR public.is_admin_of_organization(auth.uid(), organization_members.organization_id) -- Admin der Organisation
   );
 
 -- Admins können Memberships in ihrer Organisation aktualisieren
@@ -156,14 +178,7 @@ CREATE POLICY "admins_update_org_members"
   FOR UPDATE
   USING (
     auth.role() = 'service_role'
-    OR EXISTS (
-      SELECT 1
-      FROM public.organization_members om
-      WHERE om.organization_id = organization_members.organization_id
-        AND om.user_id = auth.uid()
-        AND om.role = 'admin'
-        AND om.is_active = true
-    )
+    OR public.is_admin_of_organization(auth.uid(), organization_members.organization_id) -- Admin der Organisation
   );
 
 -- Admins können Memberships in ihrer Organisation löschen (soft delete)
@@ -172,14 +187,7 @@ CREATE POLICY "admins_delete_org_members"
   FOR DELETE
   USING (
     auth.role() = 'service_role'
-    OR EXISTS (
-      SELECT 1
-      FROM public.organization_members om
-      WHERE om.organization_id = organization_members.organization_id
-        AND om.user_id = auth.uid()
-        AND om.role = 'admin'
-        AND om.is_active = true
-    )
+    OR public.is_admin_of_organization(auth.uid(), organization_members.organization_id) -- Admin der Organisation
   );
 
 -- Service Role hat vollen Zugriff
