@@ -63,30 +63,80 @@ export async function signUp(
     const firstName = nameParts[0] || '';
     const lastName = nameParts.slice(1).join(' ') || '';
 
-    // Verwende SQL-Funktion create_profile_for_user (SECURITY DEFINER, umgeht RLS)
-    // Mit Timeout: max. 5 Sekunden
-    const profilePromise = supabase.rpc('create_profile_for_user', {
-      user_id: userId,
-      full_name: fullName
-    });
-
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Profil-Erstellung hat zu lange gedauert (Timeout)')), 5000)
-    );
-
+    // Versuche Profil zu erstellen - verwende SQL-Funktion um RLS zu umgehen
+    // Falls Funktion nicht existiert, verwende direkten INSERT mit Retry
     let profileError = null;
+    
     try {
-      const result = await Promise.race([profilePromise, timeoutPromise]);
-      profileError = (result as any).error || null;
+      // Versuche RPC-Funktion (falls vorhanden)
+      const { error: rpcError } = await Promise.race([
+        supabase.rpc('create_profile_for_user', {
+          user_id: userId,
+          full_name: fullName
+        }),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('RPC-Funktion Timeout (5s)')), 5000)
+        )
+      ]) as any;
+
+      if (rpcError) {
+        // Wenn Funktion nicht existiert (42883), versuche direkten INSERT
+        if (rpcError.code === '42883' || rpcError.message?.includes('function') || rpcError.message?.includes('does not exist')) {
+          console.log('⚠️ signUp: RPC-Funktion existiert nicht, verwende direkten INSERT...');
+          const { error: insertError } = await supabase
+            .from('profiles')
+            .insert({
+              id: userId,
+              full_name: fullName,
+            });
+          
+          if (insertError) {
+            // 23505 = unique_violation (Profil existiert bereits) - das ist OK!
+            if (insertError.code === '23505' || insertError.message?.includes('duplicate') || insertError.message?.includes('already exists')) {
+              console.log('✅ signUp: Profil existiert bereits (wurde vom Trigger erstellt)');
+              profileError = null;
+            } else {
+              profileError = insertError;
+            }
+          } else {
+            console.log('✅ signUp: Profil erstellt (direkter INSERT)');
+            profileError = null;
+          }
+        } else {
+          profileError = rpcError;
+        }
+      } else {
+        console.log('✅ signUp: Profil erstellt/aktualisiert (RPC-Funktion)');
+        profileError = null;
+      }
     } catch (error: any) {
-      profileError = error;
+      // Timeout oder anderer Fehler - versuche direkten INSERT als Fallback
+      console.log('⚠️ signUp: RPC-Funktion fehlgeschlagen, verwende direkten INSERT als Fallback...', error.message);
+      const { error: insertError } = await supabase
+        .from('profiles')
+        .insert({
+          id: userId,
+          full_name: fullName,
+        });
+      
+      if (insertError) {
+        // 23505 = unique_violation (Profil existiert bereits) - das ist OK!
+        if (insertError.code === '23505' || insertError.message?.includes('duplicate') || insertError.message?.includes('already exists')) {
+          console.log('✅ signUp: Profil existiert bereits (wurde vom Trigger erstellt)');
+          profileError = null;
+        } else {
+          profileError = insertError;
+        }
+      } else {
+        console.log('✅ signUp: Profil erstellt (Fallback INSERT)');
+        profileError = null;
+      }
     }
 
     if (profileError) {
       console.error('❌ signUp: Profil-Erstellung fehlgeschlagen:', profileError);
       return { success: false, error: `Profil konnte nicht erstellt werden: ${profileError.message}` };
     }
-    console.log('✅ signUp: Profil erstellt/aktualisiert');
 
     // 3. Membership anlegen
     console.log('🔵 signUp: Erstelle Membership...', { organizationId, userId, role });
