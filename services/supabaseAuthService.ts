@@ -53,23 +53,46 @@ export async function signUp(
     console.log('✅ signUp: Auth-User erstellt, ID:', userId);
 
     // 2. Profil in profiles-Tabelle anlegen
+    // WICHTIG: Kurze Verzögerung, damit der User in auth.users vollständig verfügbar ist
+    console.log('🔵 signUp: Warte kurz, damit User in auth.users verfügbar ist...');
+    await new Promise(resolve => setTimeout(resolve, 500)); // 500ms Verzögerung
+
     console.log('🔵 signUp: Erstelle Profil...');
     const nameParts = fullName.split(' ');
     const firstName = nameParts[0] || '';
     const lastName = nameParts.slice(1).join(' ') || '';
 
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .insert({
-        id: userId,
-        full_name: fullName,
-      });
+    // Retry-Logik für Profil-Erstellung (max. 3 Versuche)
+    let profileError = null;
+    let retries = 0;
+    const maxRetries = 3;
+    
+    while (retries < maxRetries) {
+      const { error } = await supabase
+        .from('profiles')
+        .insert({
+          id: userId,
+          full_name: fullName,
+        });
+
+      if (!error) {
+        console.log('✅ signUp: Profil erstellt (Versuch', retries + 1, ')');
+        break;
+      }
+
+      profileError = error;
+      retries++;
+      
+      if (retries < maxRetries) {
+        console.log(`⚠️ signUp: Profil-Erstellung fehlgeschlagen (Versuch ${retries}), warte und versuche erneut...`);
+        await new Promise(resolve => setTimeout(resolve, 1000 * retries)); // Exponential backoff
+      }
+    }
 
     if (profileError) {
-      console.error('❌ signUp: Profil-Erstellung fehlgeschlagen:', profileError);
+      console.error('❌ signUp: Profil-Erstellung fehlgeschlagen nach', maxRetries, 'Versuchen:', profileError);
       return { success: false, error: `Profil konnte nicht erstellt werden: ${profileError.message}` };
     }
-    console.log('✅ signUp: Profil erstellt');
 
     // 3. Membership anlegen
     console.log('🔵 signUp: Erstelle Membership...', { organizationId, userId, role });
