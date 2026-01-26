@@ -12,12 +12,13 @@ interface AdminDashboardProps {
   onShowDetails: (asset: Asset) => void;
   onAddAsset: () => void;
   onManageUsers: () => void;
+  onManageOrganizations?: () => void;
 }
 
 type SortOption = 'name-asc' | 'name-desc' | 'date-asc' | 'date-desc' | 'condition-asc' | 'condition-desc';
 type MaintenanceFilter = 'ALL' | 'OK' | 'WARNING' | 'CRITICAL';
 
-const AdminDashboard: React.FC<AdminDashboardProps> = ({ assets, users, loans, onShowDetails, onAddAsset, onManageUsers }) => {
+const AdminDashboard: React.FC<AdminDashboardProps> = ({ assets, users, loans, onShowDetails, onAddAsset, onManageUsers, onManageOrganizations }) => {
   const [filterType, setFilterType] = useState<AssetType | 'ALL'>('ALL');
   const [filterStatus, setFilterStatus] = useState<'available' | 'loaned' | 'ALL'>('ALL');
   const [filterCondition, setFilterCondition] = useState<number | 'ALL'>('ALL');
@@ -126,6 +127,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ assets, users, loans, o
               </svg>
               <span className="hidden sm:inline">Statistiken</span>
             </button>
+            
+            {onManageOrganizations && (
+              <button 
+                onClick={onManageOrganizations}
+                className="bg-purple-100 dark:bg-purple-900/30 hover:bg-purple-200 dark:hover:bg-purple-900/50 text-purple-700 dark:text-purple-300 font-black px-4 py-2.5 rounded-xl shadow-sm flex items-center gap-2 transition-all active:scale-95 uppercase italic tracking-tighter text-xs border border-purple-200 dark:border-purple-800"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+                <span className="hidden sm:inline">Organisationen</span>
+              </button>
+            )}
             
             <button 
               onClick={onManageUsers}

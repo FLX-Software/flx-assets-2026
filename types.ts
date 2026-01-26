@@ -13,14 +13,16 @@ export const AssetTypeLabels: Record<AssetType, string> = {
 };
 
 export enum UserRole {
+  STAFF = 'staff',
   ADMIN = 'admin',
-  STAFF = 'staff'
+  SUPER_ADMIN = 'super_admin'
 }
 
 // Frontend-Display-Namen
 export const UserRoleLabels: Record<UserRole, string> = {
+  [UserRole.STAFF]: 'Mitarbeiter',
   [UserRole.ADMIN]: 'Admin',
-  [UserRole.STAFF]: 'Mitarbeiter'
+  [UserRole.SUPER_ADMIN]: 'Super-Admin'
 };
 
 export interface RepairEntry {

@@ -585,6 +585,35 @@ export async function loadUserWithOrganizations(userId: string, organizationId?:
       return user;
     }
 
+    // Prüfe ob User Super-Admin ist
+    const isSuperAdmin = memberships.some(m => m.role === 'super_admin');
+    
+    // Wenn Super-Admin und organizationId angegeben, aber keine Membership in dieser Org:
+    // Füge Super-Admin automatisch als Admin hinzu
+    if (isSuperAdmin && organizationId) {
+      const hasMembershipInOrg = memberships.some(m => m.organization_id === organizationId);
+      if (!hasMembershipInOrg) {
+        console.log('🔵 Super-Admin: Füge automatisch Admin-Membership zur Organisation hinzu...');
+        try {
+          const { addMemberToOrganization } = await import('./supabaseOrganizationService');
+          await addMemberToOrganization(organizationId, userId, 'admin');
+          // Lade Memberships neu
+          const { data: updatedMemberships } = await supabase
+            .from('organization_members')
+            .select('*, organizations(*)')
+            .eq('user_id', userId)
+            .eq('is_active', true);
+          if (updatedMemberships) {
+            memberships = updatedMemberships as any;
+            console.log('✅ Super-Admin: Automatisch als Admin hinzugefügt');
+          }
+        } catch (addError) {
+          console.warn('⚠️ Konnte Super-Admin nicht automatisch hinzufügen:', addError);
+          // Weiter mit bestehenden Memberships
+        }
+      }
+    }
+
     if (!memberships || memberships.length === 0) {
       console.error('❌ Keine aktiven Memberships gefunden für User:', userId);
       return null;
@@ -608,6 +637,12 @@ export async function loadUserWithOrganizations(userId: string, organizationId?:
     const firstName = nameParts[0] || '';
     const lastName = nameParts.slice(1).join(' ') || '';
 
+    // Bestimme Rolle: Wenn Super-Admin, dann SUPER_ADMIN, sonst Membership-Rolle
+    // Aber in der aktuellen Organisation hat Super-Admin Admin-Rechte
+    const effectiveRole = isSuperAdmin 
+      ? UserRole.SUPER_ADMIN 
+      : (currentMembership.role as UserRole);
+
     const user: User = {
       id: profile.id,
       firstName,
@@ -615,7 +650,7 @@ export async function loadUserWithOrganizations(userId: string, organizationId?:
       name: profile.full_name,
       email: (await supabase.auth.getUser()).data.user?.email || '',
       username: (await supabase.auth.getUser()).data.user?.email?.split('@')[0] || '',
-      role: currentMembership.role as UserRole,
+      role: effectiveRole,
       organizationId: currentOrgId,
       organizationName: orgName,
     };

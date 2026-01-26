@@ -1,19 +1,20 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { User, UserRole, Asset, LoanRecord } from './types';
+import { User, UserRole, Asset, LoanRecord, Organization } from './types';
 import AdminDashboard from './components/AdminDashboard';
 import StaffDashboard from './components/StaffDashboard';
 import QRScanner from './components/QRScanner';
 import AssetDetailModal from './components/AssetDetailModal';
 import AssetCreateModal from './components/AssetCreateModal';
 import UserManagementModal from './components/UserManagementModal';
+import OrganizationManagementModal from './components/OrganizationManagementModal';
 import Login from './components/Login';
 import { processQRScan } from './services/supabaseInventoryService';
-import { getCurrentUser, signOut, onAuthStateChange } from './services/supabaseAuthService';
+import { getCurrentUser, signOut, onAuthStateChange, loadUserWithOrganizations } from './services/supabaseAuthService';
 import { fetchAssets, createAsset, updateAsset, deleteAsset } from './services/supabaseAssetService';
 import { deleteAssetImage } from './services/supabaseStorageService';
 import { fetchLoans } from './services/supabaseLoanService';
-import { fetchOrganizationMembers } from './services/supabaseOrganizationService';
+import { fetchOrganizationMembers, fetchUserOrganizations, fetchAllOrganizations } from './services/supabaseOrganizationService';
 
 const App: React.FC = () => {
   console.log('🔵 App component rendering...');
@@ -25,9 +26,12 @@ const App: React.FC = () => {
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isUserMgmtOpen, setIsUserMgmtOpen] = useState(false);
+  const [isOrgMgmtOpen, setIsOrgMgmtOpen] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const [notification, setNotification] = useState<{message: string, type: 'success' | 'error'} | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [availableOrganizations, setAvailableOrganizations] = useState<Organization[]>([]);
+  const [isOrgDropdownOpen, setIsOrgDropdownOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const saved = localStorage.getItem('flx_theme');
     if (saved) return saved === 'dark';
@@ -106,7 +110,50 @@ const App: React.FC = () => {
   const handleLogin = async (user: User) => {
     setCurrentUser(user);
     await loadData(user);
+    
+    // Lade verfügbare Organisationen (für Super-Admin oder User mit mehreren Orgs)
+    if (user.role === UserRole.SUPER_ADMIN) {
+      try {
+        const allOrgs = await fetchAllOrganizations();
+        setAvailableOrganizations(allOrgs);
+      } catch (error) {
+        console.error('Fehler beim Laden aller Organisationen:', error);
+      }
+    } else {
+      try {
+        const userOrgs = await fetchUserOrganizations(user.id);
+        // Nur Organisationen, in denen User Admin ist
+        const adminOrgs = userOrgs.filter(org => {
+          // Prüfe ob User Admin in dieser Org ist
+          return true; // Vereinfacht: Alle Orgs des Users
+        });
+        setAvailableOrganizations(adminOrgs);
+      } catch (error) {
+        console.error('Fehler beim Laden der User-Organisationen:', error);
+      }
+    }
+    
     showNotification(`Willkommen zurück, ${user.firstName}!`, 'success');
+  };
+
+  const handleSwitchOrganization = async (orgId: string) => {
+    if (!currentUser) return;
+    
+    try {
+      setIsLoading(true);
+      const user = await loadUserWithOrganizations(currentUser.id, orgId);
+      if (user) {
+        setCurrentUser(user);
+        await loadData(user);
+        setIsOrgDropdownOpen(false);
+        showNotification(`Zu ${user.organizationName} gewechselt`, 'success');
+      }
+    } catch (error: any) {
+      console.error('Fehler beim Wechseln der Organisation:', error);
+      showNotification('Fehler beim Wechseln der Organisation', 'error');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleLogout = async () => {
@@ -349,10 +396,53 @@ const App: React.FC = () => {
 
             <div className="h-8 w-px bg-white/10 mx-1"></div>
 
+            {/* Organisation-Dropdown (nur wenn mehrere Organisationen verfügbar) */}
+            {availableOrganizations.length > 1 && (
+              <div className="relative">
+                <button
+                  onClick={() => setIsOrgDropdownOpen(!isOrgDropdownOpen)}
+                  className="flex items-center gap-2 px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all text-sm font-bold"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                  </svg>
+                  <span className="hidden sm:inline max-w-[150px] truncate">{currentUser.organizationName || 'Organisation'}</span>
+                  <svg className={`w-4 h-4 transition-transform ${isOrgDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                
+                {isOrgDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-64 bg-[#0d1117] border border-blue-500/20 rounded-xl shadow-2xl z-50 overflow-hidden">
+                    <div className="p-2">
+                      {availableOrganizations.map(org => (
+                        <button
+                          key={org.id}
+                          onClick={() => handleSwitchOrganization(org.id)}
+                          className={`w-full text-left px-4 py-3 rounded-lg transition-all ${
+                            org.id === currentUser.organizationId
+                              ? 'bg-blue-600 text-white'
+                              : 'hover:bg-white/10 text-white'
+                          }`}
+                        >
+                          <p className="font-black text-sm uppercase italic">{org.name}</p>
+                          {org.id === currentUser.organizationId && (
+                            <p className="text-xs text-blue-200 mt-0.5">Aktuell</p>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="flex items-center gap-2">
               <div className="hidden sm:block text-right">
                 <p className="text-[10px] font-black uppercase italic tracking-tighter leading-none">{currentUser.name}</p>
-                <p className="text-[8px] font-bold text-blue-500 uppercase tracking-widest">{currentUser.role === UserRole.ADMIN ? 'Admin' : 'Mitarbeiter'}</p>
+                <p className="text-[8px] font-bold text-blue-500 uppercase tracking-widest">
+                  {currentUser.role === UserRole.SUPER_ADMIN ? 'Super-Admin' : currentUser.role === UserRole.ADMIN ? 'Admin' : 'Mitarbeiter'}
+                </p>
               </div>
               <button 
                 onClick={handleLogout}
@@ -401,7 +491,7 @@ const App: React.FC = () => {
           </div>
         )}
 
-        {currentUser.role === UserRole.ADMIN ? (
+        {(currentUser.role === UserRole.ADMIN || currentUser.role === UserRole.SUPER_ADMIN) ? (
           <AdminDashboard 
             assets={assets} 
             users={users}
@@ -409,6 +499,7 @@ const App: React.FC = () => {
             onShowDetails={setSelectedAsset} 
             onAddAsset={() => setIsCreateModalOpen(true)}
             onManageUsers={() => setIsUserMgmtOpen(true)}
+            onManageOrganizations={currentUser.role === UserRole.SUPER_ADMIN ? () => setIsOrgMgmtOpen(true) : undefined}
           />
         ) : (
           <StaffDashboard 
@@ -443,6 +534,20 @@ const App: React.FC = () => {
         />
       )}
 
+      {isOrgMgmtOpen && (
+        <OrganizationManagementModal 
+          onClose={() => setIsOrgMgmtOpen(false)}
+          onShowNotification={showNotification}
+          onOrganizationCreated={async (org) => {
+            // Lade verfügbare Organisationen neu
+            if (currentUser?.role === UserRole.SUPER_ADMIN) {
+              const allOrgs = await fetchAllOrganizations();
+              setAvailableOrganizations(allOrgs);
+            }
+          }}
+        />
+      )}
+
       {selectedAsset && (
         <AssetDetailModal 
           asset={selectedAsset} 
@@ -451,7 +556,7 @@ const App: React.FC = () => {
           onSave={handleSaveAsset}
           onDelete={handleDeleteAsset}
           onReturn={handleReturnAsset}
-          isAdmin={currentUser.role === UserRole.ADMIN}
+          isAdmin={currentUser.role === UserRole.ADMIN || currentUser.role === UserRole.SUPER_ADMIN}
           organizationId={currentUser.organizationId || ''}
         />
       )}
