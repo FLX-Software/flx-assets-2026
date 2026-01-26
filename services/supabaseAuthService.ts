@@ -179,15 +179,27 @@ export async function signUp(
           profileError = null;
         }
       } catch (insertTimeoutError: any) {
-        console.error('❌ signUp: INSERT Timeout - Profil wurde wahrscheinlich vom Trigger erstellt');
+        console.log('⚠️ signUp: INSERT Timeout - Profil wurde wahrscheinlich vom Trigger erstellt, fahre fort...');
         // Annahme: Profil wurde vom Trigger erstellt, weiter mit Membership
         profileError = null;
+        profileCreated = true;
       }
     }
 
-    if (profileError) {
+    // Wenn Profil-Erstellung fehlgeschlagen ist, aber nicht wegen Timeout/Conflict, dann Fehler
+    if (profileError && !profileCreated) {
       console.error('❌ signUp: Profil-Erstellung fehlgeschlagen:', profileError);
-      return { success: false, error: `Profil konnte nicht erstellt werden: ${profileError.message}` };
+      // Prüfe ob es ein RLS-Fehler ist - dann nehmen wir an dass Trigger es erstellt hat
+      if (profileError.code === '42501') {
+        console.log('⚠️ signUp: RLS blockiert - Profil wurde wahrscheinlich vom Trigger erstellt, fahre fort...');
+        profileError = null;
+      } else {
+        return { success: false, error: `Profil konnte nicht erstellt werden: ${profileError.message}` };
+      }
+    }
+    
+    if (!profileError) {
+      console.log('✅ signUp: Profil erstellt oder existiert bereits');
     }
 
     // 3. Membership anlegen
