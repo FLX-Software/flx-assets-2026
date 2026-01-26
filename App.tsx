@@ -114,18 +114,27 @@ const App: React.FC = () => {
     // Lade verfügbare Organisationen (für Super-Admin oder User mit mehreren Orgs)
     if (user.role === UserRole.SUPER_ADMIN) {
       try {
+        // Super-Admin sieht alle Organisationen
         const allOrgs = await fetchAllOrganizations();
         setAvailableOrganizations(allOrgs);
       } catch (error) {
         console.error('Fehler beim Laden aller Organisationen:', error);
+        // Fallback: Lade nur User-Organisationen
+        try {
+          const userOrgs = await fetchUserOrganizations(user.id);
+          setAvailableOrganizations(userOrgs);
+        } catch (fallbackError) {
+          console.error('Fehler beim Fallback-Laden:', fallbackError);
+        }
       }
     } else {
       try {
+        // Normale User: Nur Organisationen, in denen sie Mitglied sind
         const userOrgs = await fetchUserOrganizations(user.id);
-        // Nur Organisationen, in denen User Admin ist
+        // Filtere nur Organisationen, in denen User Admin ist (für Wechsel)
         const adminOrgs = userOrgs.filter(org => {
-          // Prüfe ob User Admin in dieser Org ist
-          return true; // Vereinfacht: Alle Orgs des Users
+          // Vereinfacht: Alle Orgs des Users (kann später erweitert werden)
+          return true;
         });
         setAvailableOrganizations(adminOrgs);
       } catch (error) {
