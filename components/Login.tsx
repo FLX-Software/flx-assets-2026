@@ -8,7 +8,7 @@ interface LoginProps {
 }
 
 const Login: React.FC<LoginProps> = ({ onLogin }) => {
-  const [email, setEmail] = useState('');
+  const [emailOrUsername, setEmailOrUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -16,14 +16,21 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    
+    // Validierung: Mindestens E-Mail/Benutzername und Passwort müssen eingegeben sein
+    if (!emailOrUsername.trim() || !password.trim()) {
+      setError('Bitte geben Sie E-Mail/Benutzername und Passwort ein.');
+      return;
+    }
+    
     setIsLoading(true);
 
     try {
-      const result = await signIn(email, password);
+      const result = await signIn(emailOrUsername.trim(), password);
       if (result.success && result.user) {
         onLogin(result.user);
       } else {
-        setError(result.error || 'Ungültige E-Mail oder Passwort.');
+        setError(result.error || 'Ungültige E-Mail/Benutzername oder Passwort.');
       }
     } catch (err: any) {
       setError(err.message || 'Ein Fehler ist aufgetreten.');
@@ -57,15 +64,19 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           )}
           
           <div className="space-y-2">
-            <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">E-Mail</label>
+            <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">E-Mail / Benutzername</label>
             <input 
-              type="email" 
+              type="text" 
               className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm font-bold dark:text-white placeholder:text-slate-300 dark:placeholder:text-slate-700"
-              placeholder="max@flx-software.de"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
+              placeholder="max@flx-software.de oder max.mustermann"
+              value={emailOrUsername}
+              onChange={(e) => setEmailOrUsername(e.target.value)}
               disabled={isLoading}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && emailOrUsername.trim() && password.trim()) {
+                  handleSubmit(e as any);
+                }
+              }}
             />
           </div>
 

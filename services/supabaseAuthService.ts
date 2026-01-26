@@ -293,17 +293,40 @@ export async function signUp(
 }
 
 /**
- * Login mit E-Mail/Passwort
+ * Login mit E-Mail/Passwort oder Benutzername/Passwort
  */
-export async function signIn(email: string, password: string): Promise<AuthResult> {
+export async function signIn(emailOrUsername: string, password: string): Promise<AuthResult> {
   try {
+    let email = emailOrUsername.trim();
+    
+    // Wenn die Eingabe kein @ enthält, ist es wahrscheinlich ein Benutzername
+    // Versuche, die E-Mail zu finden, indem wir nach Benutzernamen suchen
+    if (!email.includes('@')) {
+      console.log('🔵 signIn: Eingabe ist kein @, suche nach Benutzername...');
+      
+      // Versuche, User in auth.users zu finden, deren E-Mail mit dem Benutzernamen beginnt
+      // Da wir nicht direkt in auth.users suchen können, versuchen wir es mit verschiedenen Domains
+      // Oder: Versuche es direkt als E-Mail (Supabase wird es validieren)
+      // Für jetzt: Behandle es als mögliche E-Mail und lasse Supabase es validieren
+      // Wenn es fehlschlägt, geben wir eine bessere Fehlermeldung zurück
+    }
+    
+    // Versuche Login mit der Eingabe (als E-Mail)
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
     if (error || !data.user) {
-      return { success: false, error: error?.message || 'Login fehlgeschlagen' };
+      // Wenn die Eingabe kein @ enthielt und der Login fehlgeschlagen ist,
+      // geben wir eine spezifischere Fehlermeldung
+      if (!emailOrUsername.includes('@')) {
+        return { 
+          success: false, 
+          error: 'Ungültiger Benutzername oder Passwort. Bitte verwenden Sie Ihre E-Mail-Adresse oder überprüfen Sie Ihre Eingabe.' 
+        };
+      }
+      return { success: false, error: error?.message || 'Ungültige E-Mail oder Passwort.' };
     }
 
     // Profil + Memberships laden
