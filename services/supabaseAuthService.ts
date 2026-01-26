@@ -68,16 +68,18 @@ export async function signUp(
     let profileError = null;
     
     try {
-      // Versuche RPC-Funktion (falls vorhanden)
-      const { error: rpcError } = await Promise.race([
-        supabase.rpc('create_profile_for_user', {
-          user_id: userId,
-          full_name: fullName
-        }),
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('RPC-Funktion Timeout (5s)')), 5000)
-        )
-      ]) as any;
+      // Versuche RPC-Funktion (falls vorhanden) mit Timeout
+      const rpcPromise = supabase.rpc('create_profile_for_user', {
+        user_id: userId,
+        full_name: fullName
+      });
+
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('RPC-Funktion Timeout (5s)')), 5000)
+      );
+
+      const result = await Promise.race([rpcPromise, timeoutPromise]) as any;
+      const rpcError = result?.error || null;
 
       if (rpcError) {
         // Wenn Funktion nicht existiert (42883), versuche direkten INSERT
@@ -100,6 +102,23 @@ export async function signUp(
             }
           } else {
             console.log('✅ signUp: Profil erstellt (direkter INSERT)');
+            profileError = null;
+          }
+        } else if (rpcError.code === 'P0001' && rpcError.message?.includes('existiert nicht in auth.users')) {
+          // User existiert noch nicht - warte länger und versuche erneut
+          console.log('⚠️ signUp: User noch nicht in auth.users, warte länger...');
+          await new Promise(resolve => setTimeout(resolve, 2000)); // 2 Sekunden warten
+          
+          // Versuche erneut
+          const { error: retryError } = await supabase.rpc('create_profile_for_user', {
+            user_id: userId,
+            full_name: fullName
+          });
+          
+          if (retryError && retryError.code !== '23505') {
+            profileError = retryError;
+          } else {
+            console.log('✅ signUp: Profil erstellt/aktualisiert (Retry erfolgreich)');
             profileError = null;
           }
         } else {
