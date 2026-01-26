@@ -95,7 +95,7 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
           
           const uploadPromise = uploadAssetImage(selectedFile, formData.id, organizationId);
           const timeoutPromise = new Promise<{ url: null; error: string }>((resolve) => {
-            setTimeout(() => resolve({ url: null, error: 'Upload-Timeout: Das Bild konnte nicht innerhalb von 60 Sekunden hochgeladen werden' }), 60000); // 60 Sekunden Timeout
+            setTimeout(() => resolve({ url: null, error: 'Upload-Timeout: Das Bild konnte nicht innerhalb von 120 Sekunden hochgeladen werden' }), 120000); // 120 Sekunden Timeout
           });
           
           uploadResult = await Promise.race([uploadPromise, timeoutPromise]);

@@ -33,19 +33,39 @@ export async function uploadAssetImage(
     const timestamp = Date.now();
     const fileName = `${organizationId}/${assetId}-${timestamp}.${fileExtension}`;
 
-    console.log('📤 Upload zu Supabase Storage...', { bucket: BUCKET_NAME, fileName });
+    console.log('📤 Upload zu Supabase Storage...', { bucket: BUCKET_NAME, fileName, fileSize: file.size });
 
-    // Upload zu Supabase Storage
-    const { data, error } = await supabase.storage
+    const uploadStartTime = Date.now();
+    
+    // Upload zu Supabase Storage mit Timeout-Überwachung
+    const uploadPromise = supabase.storage
       .from(BUCKET_NAME)
       .upload(fileName, file, {
         cacheControl: '3600',
         upsert: false, // Nicht überschreiben, neue Datei erstellen
       });
 
-    if (error) {
-      console.error('❌ Upload-Fehler:', error);
-      return { url: null, error: error.message || 'Upload fehlgeschlagen' };
+    // Überwache den Upload mit einem Heartbeat
+    const heartbeatInterval = setInterval(() => {
+      const elapsed = Date.now() - uploadStartTime;
+      console.log(`⏳ Upload läuft noch... (${Math.round(elapsed / 1000)}s)`);
+    }, 10000); // Alle 10 Sekunden loggen
+
+    try {
+      const { data, error } = await uploadPromise;
+      clearInterval(heartbeatInterval);
+      
+      const uploadDuration = Date.now() - uploadStartTime;
+      console.log(`✅ Upload abgeschlossen in ${Math.round(uploadDuration / 1000)}s`);
+
+      if (error) {
+        console.error('❌ Upload-Fehler:', error);
+        return { url: null, error: error.message || 'Upload fehlgeschlagen' };
+      }
+    } catch (uploadError: any) {
+      clearInterval(heartbeatInterval);
+      console.error('❌ Upload-Exception:', uploadError);
+      return { url: null, error: uploadError.message || 'Upload fehlgeschlagen' };
     }
 
     console.log('✅ Upload erfolgreich, hole öffentliche URL...');
