@@ -13,12 +13,14 @@ interface AdminDashboardProps {
   onAddAsset: () => void;
   onManageUsers: () => void;
   onManageOrganizations?: () => void;
+  onExport: () => void;
+  onImport: () => void;
 }
 
 type SortOption = 'name-asc' | 'name-desc' | 'date-asc' | 'date-desc' | 'condition-asc' | 'condition-desc';
 type MaintenanceFilter = 'ALL' | 'OK' | 'WARNING' | 'CRITICAL';
 
-const AdminDashboard: React.FC<AdminDashboardProps> = ({ assets, users, loans, onShowDetails, onAddAsset, onManageUsers, onManageOrganizations }) => {
+const AdminDashboard: React.FC<AdminDashboardProps> = ({ assets, users, loans, onShowDetails, onAddAsset, onManageUsers, onManageOrganizations, onExport, onImport }) => {
   const [filterType, setFilterType] = useState<AssetType | 'ALL'>('ALL');
   const [filterStatus, setFilterStatus] = useState<'available' | 'loaned' | 'ALL'>('ALL');
   const [filterCondition, setFilterCondition] = useState<number | 'ALL'>('ALL');
@@ -148,6 +150,26 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ assets, users, loans, o
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
               </svg>
               <span className="hidden sm:inline">Benutzer</span>
+            </button>
+            
+            <button 
+              onClick={onImport}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-black px-4 py-2.5 rounded-xl shadow-lg shadow-emerald-600/20 flex items-center gap-2 transition-all active:scale-95 uppercase italic tracking-tighter text-xs"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              </svg>
+              <span className="hidden sm:inline">Import</span>
+            </button>
+            
+            <button 
+              onClick={onExport}
+              className="bg-purple-600 hover:bg-purple-700 text-white font-black px-4 py-2.5 rounded-xl shadow-lg shadow-purple-600/20 flex items-center gap-2 transition-all active:scale-95 uppercase italic tracking-tighter text-xs"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              <span className="hidden sm:inline">Export</span>
             </button>
             
             <button 

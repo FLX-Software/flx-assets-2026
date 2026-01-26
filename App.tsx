@@ -8,6 +8,8 @@ import AssetDetailModal from './components/AssetDetailModal';
 import AssetCreateModal from './components/AssetCreateModal';
 import UserManagementModal from './components/UserManagementModal';
 import OrganizationManagementModal from './components/OrganizationManagementModal';
+import ExportModal from './components/ExportModal';
+import ImportModal from './components/ImportModal';
 import Login from './components/Login';
 import { processQRScan } from './services/supabaseInventoryService';
 import { getCurrentUser, signOut, onAuthStateChange, loadUserWithOrganizations } from './services/supabaseAuthService';
@@ -27,6 +29,8 @@ const App: React.FC = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isUserMgmtOpen, setIsUserMgmtOpen] = useState(false);
   const [isOrgMgmtOpen, setIsOrgMgmtOpen] = useState(false);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const [notification, setNotification] = useState<{message: string, type: 'success' | 'error'} | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -562,6 +566,8 @@ const App: React.FC = () => {
             onAddAsset={() => setIsCreateModalOpen(true)}
             onManageUsers={() => setIsUserMgmtOpen(true)}
             onManageOrganizations={currentUser.role === UserRole.SUPER_ADMIN ? () => setIsOrgMgmtOpen(true) : undefined}
+            onExport={() => setIsExportModalOpen(true)}
+            onImport={() => setIsImportModalOpen(true)}
           />
         ) : (
           <StaffDashboard 
@@ -620,6 +626,29 @@ const App: React.FC = () => {
           onReturn={handleReturnAsset}
           isAdmin={currentUser.role === UserRole.ADMIN || currentUser.role === UserRole.SUPER_ADMIN}
           organizationId={currentUser.organizationId || ''}
+        />
+      )}
+
+      {isExportModalOpen && (
+        <ExportModal
+          onClose={() => setIsExportModalOpen(false)}
+          assets={assets}
+          loans={history}
+        />
+      )}
+
+      {isImportModalOpen && (
+        <ImportModal
+          onClose={() => setIsImportModalOpen(false)}
+          onImportComplete={async () => {
+            // Lade Assets neu nach Import
+            if (currentUser?.organizationId) {
+              await loadData(currentUser);
+            }
+            showNotification('Assets erfolgreich importiert!', 'success');
+          }}
+          organizationId={currentUser.organizationId || ''}
+          existingAssets={assets}
         />
       )}
     </div>
