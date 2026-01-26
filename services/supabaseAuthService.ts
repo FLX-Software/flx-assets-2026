@@ -503,13 +503,22 @@ export async function loadUserWithOrganizations(userId: string, organizationId?:
       return null;
     }
 
-    // Profil laden
+    // Profil laden mit Timeout
     console.log('🔍 Loading profile...');
-    const { data: profile, error: profileError } = await supabase
+    const profilePromise = supabase
       .from('profiles')
       .select('*')
       .eq('id', userId)
       .single();
+    
+    const profileTimeout = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Profil-Query Timeout (10s)')), 10000)
+    );
+    
+    const { data: profile, error: profileError } = await Promise.race([
+      profilePromise,
+      profileTimeout
+    ]) as any;
 
     if (profileError) {
       console.error('❌ Profil-Query-Fehler:', profileError);
@@ -524,13 +533,27 @@ export async function loadUserWithOrganizations(userId: string, organizationId?:
     
     console.log('✅ Profil gefunden:', profile.full_name);
 
-    // Memberships laden (zuerst ohne organizations join)
+    // Memberships laden (zuerst ohne organizations join) mit Timeout
     console.log('🔍 Loading memberships...');
-    const { data: memberships, error: memberError } = await supabase
+    const membershipsPromise = supabase
       .from('organization_members')
       .select('*, organizations(*)')
       .eq('user_id', userId)
       .eq('is_active', true);
+    
+    const membershipsTimeout = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Memberships-Query Timeout (10s)')), 10000)
+    );
+    
+    let membershipsResult: any;
+    try {
+      membershipsResult = await Promise.race([membershipsPromise, membershipsTimeout]);
+    } catch (timeoutError) {
+      console.error('❌ Memberships-Query Timeout:', timeoutError);
+      throw timeoutError;
+    }
+    
+    const { data: memberships, error: memberError } = membershipsResult;
 
     if (memberError) {
       console.error('❌ Membership-Query-Fehler:', memberError);
@@ -643,13 +666,17 @@ export async function loadUserWithOrganizations(userId: string, organizationId?:
       ? UserRole.SUPER_ADMIN 
       : (currentMembership.role as UserRole);
 
+    // Email nur einmal laden (nicht zweimal)
+    const email = authUser.email || '';
+    const username = email.split('@')[0] || '';
+
     const user: User = {
       id: profile.id,
       firstName,
       lastName,
       name: profile.full_name,
-      email: (await supabase.auth.getUser()).data.user?.email || '',
-      username: (await supabase.auth.getUser()).data.user?.email?.split('@')[0] || '',
+      email,
+      username,
       role: effectiveRole,
       organizationId: currentOrgId,
       organizationName: orgName,

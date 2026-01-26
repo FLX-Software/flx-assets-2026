@@ -153,20 +153,52 @@ const App: React.FC = () => {
   const handleSwitchOrganization = async (orgId: string) => {
     if (!currentUser) return;
     
+    // Verhindere mehrfache gleichzeitige Wechsel
+    if (isLoading) {
+      console.warn('⚠️ Organisation-Wechsel bereits in Bearbeitung, ignoriere...');
+      return;
+    }
+    
     try {
       setIsLoading(true);
-      const user = await loadUserWithOrganizations(currentUser.id, orgId);
-      if (user) {
+      console.log('🔄 Starte Organisation-Wechsel zu:', orgId);
+      
+      // Timeout für gesamten Wechsel-Prozess (30 Sekunden)
+      const switchPromise = (async () => {
+        const user = await loadUserWithOrganizations(currentUser.id, orgId);
+        if (!user) {
+          throw new Error('User konnte nicht geladen werden');
+        }
+        
         setCurrentUser(user);
-        await loadData(user);
-        // Aktualisiere verfügbare Organisationen nach Wechsel
-        await loadAvailableOrganizations(user);
-        setIsOrgDropdownOpen(false);
-        showNotification(`Zu ${user.organizationName} gewechselt`, 'success');
-      }
+        console.log('✅ User geladen, lade Daten...');
+        
+        // Lade Daten parallel für bessere Performance
+        await Promise.all([
+          loadData(user),
+          loadAvailableOrganizations(user)
+        ]);
+        
+        console.log('✅ Organisation-Wechsel abgeschlossen');
+        return user;
+      })();
+      
+      const timeoutPromise = new Promise<User>((_, reject) => 
+        setTimeout(() => reject(new Error('Organisation-Wechsel Timeout (30s)')), 30000)
+      );
+      
+      const user = await Promise.race([switchPromise, timeoutPromise]);
+      
+      setIsOrgDropdownOpen(false);
+      showNotification(`Zu ${user.organizationName} gewechselt`, 'success');
     } catch (error: any) {
-      console.error('Fehler beim Wechseln der Organisation:', error);
-      showNotification('Fehler beim Wechseln der Organisation', 'error');
+      console.error('❌ Fehler beim Wechseln der Organisation:', error);
+      showNotification(
+        error.message?.includes('Timeout') 
+          ? 'Organisation-Wechsel hat zu lange gedauert. Bitte versuchen Sie es erneut.' 
+          : 'Fehler beim Wechseln der Organisation', 
+        'error'
+      );
     } finally {
       setIsLoading(false);
     }
