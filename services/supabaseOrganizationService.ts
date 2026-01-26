@@ -50,6 +50,8 @@ export async function createOrganization(name: string, slug?: string): Promise<O
  * Lädt alle Mitglieder einer Organisation
  */
 export async function fetchOrganizationMembers(organizationId: string): Promise<User[]> {
+  console.log('🔵 fetchOrganizationMembers: Lade Mitglieder für Org:', organizationId);
+  
   const { data, error } = await supabase
     .from('organization_members')
     .select(`
@@ -60,26 +62,39 @@ export async function fetchOrganizationMembers(organizationId: string): Promise<
     .eq('is_active', true);
 
   if (error) {
-    console.error('Fehler beim Laden der Mitglieder:', error);
+    console.error('❌ fetchOrganizationMembers: Fehler beim Laden:', error);
     throw error;
   }
 
-  if (!data) return [];
+  if (!data) {
+    console.log('⚠️ fetchOrganizationMembers: Keine Daten zurückgegeben');
+    return [];
+  }
 
-  return data.map((member: any) => {
-    const profile = member.profiles;
-    const nameParts = profile.full_name.split(' ');
-    return {
-      id: profile.id,
-      firstName: nameParts[0] || '',
-      lastName: nameParts.slice(1).join(' ') || '',
-      name: profile.full_name,
-      email: '', // Müsste aus auth.users geladen werden
-      username: '',
-      role: member.role as UserRole,
-      organizationId: organizationId,
-    };
-  });
+  console.log('✅ fetchOrganizationMembers: Gefundene Memberships:', data.length);
+
+  return data
+    .filter((member: any) => member.profiles) // Filtere Members ohne Profil
+    .map((member: any) => {
+      const profile = member.profiles;
+      if (!profile) {
+        console.warn('⚠️ fetchOrganizationMembers: Member ohne Profil gefunden:', member.user_id);
+        return null;
+      }
+      
+      const nameParts = (profile.full_name || '').split(' ');
+      return {
+        id: profile.id,
+        firstName: nameParts[0] || '',
+        lastName: nameParts.slice(1).join(' ') || '',
+        name: profile.full_name || 'Unbekannt',
+        email: '', // Müsste aus auth.users geladen werden
+        username: '',
+        role: member.role as UserRole,
+        organizationId: organizationId,
+      };
+    })
+    .filter((user): user is User => user !== null); // Entferne null-Werte
 }
 
 /**
