@@ -128,37 +128,57 @@ const UserManagementModal: React.FC<UserManagementModalProps> = ({ users, organi
       return;
     }
 
+    const userToDelete = users.find(u => u.id === id);
+    const userName = userToDelete?.name || 'Benutzer';
+
     try {
+      console.log('🔵 UserManagementModal: Starte Löschung für User:', id);
+      
       // Versuche User komplett zu löschen (Membership + Profil)
       // Falls RPC-Funktion nicht existiert, nur Membership deaktivieren
+      let deleteSuccess = false;
       try {
-        const { error: deleteError } = await supabase.rpc('delete_user_completely_secure', {
+        console.log('🔵 UserManagementModal: Rufe delete_user_completely_secure auf...');
+        const { error: deleteError, data } = await supabase.rpc('delete_user_completely_secure', {
           user_id: id
         });
 
         if (deleteError) {
+          console.error('❌ UserManagementModal: RPC-Fehler:', deleteError);
+          
           // Falls Funktion nicht existiert, nur Membership deaktivieren
           if (deleteError.code === '42883' || deleteError.message?.includes('function') || deleteError.message?.includes('does not exist')) {
             console.log('⚠️ delete_user_completely_secure Funktion existiert nicht, entferne nur aus Organisation...');
             await removeMemberFromOrganization(organizationId, id);
+            deleteSuccess = true;
           } else {
             throw deleteError;
           }
         } else {
-          console.log('✅ User komplett gelöscht (Membership + Profil)');
+          console.log('✅ UserManagementModal: User komplett gelöscht (Membership + Profil)');
+          deleteSuccess = true;
         }
       } catch (rpcError: any) {
+        console.error('❌ UserManagementModal: RPC-Funktion fehlgeschlagen:', rpcError);
         // Fallback: Nur aus Organisation entfernen
         console.log('⚠️ RPC-Funktion fehlgeschlagen, entferne nur aus Organisation...', rpcError.message);
-        await removeMemberFromOrganization(organizationId, id);
+        try {
+          await removeMemberFromOrganization(organizationId, id);
+          deleteSuccess = true;
+        } catch (removeError: any) {
+          console.error('❌ UserManagementModal: Auch removeMemberFromOrganization fehlgeschlagen:', removeError);
+          throw removeError;
+        }
       }
       
-      // Aktualisiere lokale Liste
-      onUpdateUsers(users.filter(u => u.id !== id));
-      setIsConfirmingDelete(null);
-      onShowNotification(`Benutzer wurde entfernt.`, 'success');
+      if (deleteSuccess) {
+        // Aktualisiere lokale Liste
+        onUpdateUsers(users.filter(u => u.id !== id));
+        setIsConfirmingDelete(null);
+        onShowNotification(`${userName} wurde entfernt. Hinweis: Der Benutzer bleibt in Supabase Auth sichtbar, kann sich aber nicht mehr einloggen.`, 'success');
+      }
     } catch (error: any) {
-      console.error('Fehler beim Löschen des Benutzers:', error);
+      console.error('❌ UserManagementModal: Fehler beim Löschen des Benutzers:', error);
       onShowNotification(error.message || 'Fehler beim Löschen des Benutzers.', 'error');
     }
   };

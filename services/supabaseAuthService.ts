@@ -41,6 +41,15 @@ export async function signUp(
 
     if (authError) {
       console.error('❌ signUp: Auth-Fehler:', authError);
+      
+      // Spezielle Behandlung für Rate Limits
+      if (authError.message?.includes('rate limit') || authError.message?.includes('429')) {
+        return { 
+          success: false, 
+          error: 'Zu viele Anfragen. Bitte warten Sie einige Minuten, bevor Sie einen neuen Benutzer erstellen.' 
+        };
+      }
+      
       return { success: false, error: authError.message || 'Registrierung fehlgeschlagen' };
     }
 
@@ -206,34 +215,62 @@ export async function signUp(
     // 3. Membership anlegen
     console.log('🔵 signUp: Erstelle Membership...', { organizationId, userId, role });
     
-    // Membership-Erstellung mit Timeout
-    const memberPromise = supabase
-      .from('organization_members')
-      .insert({
-        organization_id: organizationId,
-        user_id: userId,
-        role,
-        is_active: true,
-      });
-
-    const memberTimeout = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Membership-Erstellung Timeout (5s)')), 5000)
-    );
-
+    // Membership-Erstellung mit Timeout und Retry
     let memberError = null;
-    try {
-      const memberResult = await Promise.race([memberPromise, memberTimeout]) as any;
-      memberError = memberResult?.error || null;
-    } catch (timeoutError: any) {
-      console.error('❌ signUp: Membership-Erstellung Timeout:', timeoutError.message);
-      return { success: false, error: `Membership konnte nicht erstellt werden: ${timeoutError.message}` };
+    let retryCount = 0;
+    const maxRetries = 3;
+    
+    while (retryCount < maxRetries && !memberError) {
+      try {
+        const memberPromise = supabase
+          .from('organization_members')
+          .insert({
+            organization_id: organizationId,
+            user_id: userId,
+            role,
+            is_active: true,
+          });
+
+        const memberTimeout = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Membership-Erstellung Timeout (5s)')), 5000)
+        );
+
+        const memberResult = await Promise.race([memberPromise, memberTimeout]) as any;
+        memberError = memberResult?.error || null;
+        
+        if (!memberError) {
+          console.log(`✅ signUp: Membership erstellt (Versuch ${retryCount + 1})`);
+          break;
+        }
+        
+        // Wenn es ein RLS-Fehler ist, warte kurz und versuche es erneut
+        if (memberError.code === '42501' && retryCount < maxRetries - 1) {
+          console.log(`⚠️ signUp: RLS-Fehler bei Membership-Erstellung, warte 1s und versuche erneut (Versuch ${retryCount + 1}/${maxRetries})...`);
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          retryCount++;
+          memberError = null; // Reset für nächsten Versuch
+          continue;
+        }
+        
+        // Bei anderen Fehlern, breche ab
+        break;
+      } catch (timeoutError: any) {
+        if (retryCount < maxRetries - 1) {
+          console.log(`⚠️ signUp: Membership-Erstellung Timeout, versuche erneut (Versuch ${retryCount + 1}/${maxRetries})...`);
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          retryCount++;
+          continue;
+        } else {
+          console.error('❌ signUp: Membership-Erstellung Timeout nach mehreren Versuchen:', timeoutError.message);
+          return { success: false, error: `Membership konnte nicht erstellt werden: ${timeoutError.message}` };
+        }
+      }
     }
 
     if (memberError) {
-      console.error('❌ signUp: Membership-Erstellung fehlgeschlagen:', memberError);
-      return { success: false, error: `Membership konnte nicht erstellt werden: ${memberError.message}` };
+      console.error('❌ signUp: Membership-Erstellung fehlgeschlagen nach mehreren Versuchen:', memberError);
+      return { success: false, error: `Membership konnte nicht erstellt werden: ${memberError.message || 'Unbekannter Fehler'}` };
     }
-    console.log('✅ signUp: Membership erstellt');
 
     // 4. User-Objekt für Frontend zusammenbauen
     const user: User = {
