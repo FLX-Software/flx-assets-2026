@@ -33,7 +33,7 @@ $$;
 
 -- Erlaube nur Admins, diese Funktion aufzurufen
 -- Prüfe ob der aufrufende User Admin ist
-CREATE OR REPLACE FUNCTION public.delete_user_completely_secure(user_id uuid)
+CREATE OR REPLACE FUNCTION public.delete_user_completely_secure(target_user_id uuid)
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -57,11 +57,11 @@ BEGIN
   -- 1. Entferne User aus allen Organisationen (soft delete)
   UPDATE public.organization_members
   SET is_active = false
-  WHERE user_id = delete_user_completely_secure.user_id;
+  WHERE organization_members.user_id = target_user_id;
   
   -- 2. Lösche Profil
   DELETE FROM public.profiles
-  WHERE id = delete_user_completely_secure.user_id;
+  WHERE profiles.id = target_user_id;
   
   -- 3. User bleibt in auth.users (kann nicht direkt gelöscht werden ohne Service Role)
   -- Der User kann sich aber nicht mehr einloggen, da kein Profil/Membership existiert
