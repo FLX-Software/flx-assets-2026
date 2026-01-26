@@ -55,78 +55,46 @@ export async function signUp(
     // 2. Profil wird automatisch vom Trigger erstellt (create-profile-trigger.sql)
     // Warte kurz, damit der Trigger das Profil erstellt hat
     console.log('🔵 signUp: Warte auf automatische Profil-Erstellung durch Trigger...');
-    await new Promise(resolve => setTimeout(resolve, 1000)); // 1 Sekunde warten
+    await new Promise(resolve => setTimeout(resolve, 1500)); // 1.5 Sekunden warten
 
-    // Prüfe ob Profil existiert, falls nicht: manuell erstellen
-    console.log('🔵 signUp: Prüfe ob Profil existiert...');
-    const { data: existingProfile, error: checkError } = await supabase
+    // Versuche Profil zu erstellen - falls es bereits existiert (vom Trigger), ignorieren wir den Fehler
+    console.log('🔵 signUp: Erstelle/aktualisiere Profil...');
+    const nameParts = fullName.split(' ');
+    const firstName = nameParts[0] || '';
+    const lastName = nameParts.slice(1).join(' ') || '';
+
+    // Versuche Profil zu erstellen (mit ON CONFLICT würde es in SQL funktionieren, aber hier müssen wir es anders machen)
+    const { error: profileError } = await supabase
       .from('profiles')
-      .select('id, full_name')
-      .eq('id', userId)
-      .single();
+      .upsert({
+        id: userId,
+        full_name: fullName,
+      }, {
+        onConflict: 'id'
+      });
 
-    if (checkError && checkError.code !== 'PGRST116') { // PGRST116 = "not found", das ist OK
-      console.error('❌ signUp: Fehler beim Prüfen des Profils:', checkError);
-    }
-
-    if (!existingProfile) {
-      // Profil existiert nicht, erstelle es manuell
-      console.log('🔵 signUp: Profil existiert nicht, erstelle es manuell...');
-      const nameParts = fullName.split(' ');
-      const firstName = nameParts[0] || '';
-      const lastName = nameParts.slice(1).join(' ') || '';
-
-      // Retry-Logik für Profil-Erstellung (max. 3 Versuche)
-      let profileError = null;
-      let retries = 0;
-      const maxRetries = 3;
-      
-      while (retries < maxRetries) {
-        const { error } = await supabase
-          .from('profiles')
-          .insert({
-            id: userId,
-            full_name: fullName,
-          });
-
-        if (!error) {
-          console.log('✅ signUp: Profil manuell erstellt (Versuch', retries + 1, ')');
-          break;
-        }
-
-        // 409 = Conflict (Profil existiert bereits) - das ist OK!
-        if (error.code === '23505' || error.message.includes('duplicate') || error.message.includes('already exists')) {
-          console.log('✅ signUp: Profil existiert bereits (wurde vom Trigger erstellt)');
-          break;
-        }
-
-        profileError = error;
-        retries++;
-        
-        if (retries < maxRetries) {
-          console.log(`⚠️ signUp: Profil-Erstellung fehlgeschlagen (Versuch ${retries}), warte und versuche erneut...`);
-          await new Promise(resolve => setTimeout(resolve, 1000 * retries)); // Exponential backoff
-        }
-      }
-
-      if (profileError && profileError.code !== '23505') {
-        console.error('❌ signUp: Profil-Erstellung fehlgeschlagen nach', maxRetries, 'Versuchen:', profileError);
-        return { success: false, error: `Profil konnte nicht erstellt werden: ${profileError.message}` };
-      }
-    } else {
-      console.log('✅ signUp: Profil existiert bereits (wurde vom Trigger erstellt)');
-      // Aktualisiere full_name falls nötig
-      if (existingProfile.full_name !== fullName) {
+    // Ignoriere Fehler wenn Profil bereits existiert (vom Trigger erstellt)
+    if (profileError) {
+      // 23505 = unique_violation (Profil existiert bereits) - das ist OK!
+      // 409 = Conflict - das ist auch OK!
+      if (profileError.code === '23505' || 
+          profileError.code === 'PGRST116' || 
+          profileError.message.includes('duplicate') || 
+          profileError.message.includes('already exists') ||
+          profileError.message.includes('conflict')) {
+        console.log('✅ signUp: Profil existiert bereits (wurde vom Trigger erstellt), aktualisiere full_name...');
+        // Versuche full_name zu aktualisieren
         await supabase
           .from('profiles')
           .update({ full_name: fullName })
           .eq('id', userId);
+      } else {
+        console.error('❌ signUp: Profil-Erstellung fehlgeschlagen:', profileError);
+        return { success: false, error: `Profil konnte nicht erstellt werden: ${profileError.message}` };
       }
+    } else {
+      console.log('✅ signUp: Profil erstellt/aktualisiert');
     }
-
-    const nameParts = fullName.split(' ');
-    const firstName = nameParts[0] || '';
-    const lastName = nameParts.slice(1).join(' ') || '';
 
     // 3. Membership anlegen
     console.log('🔵 signUp: Erstelle Membership...', { organizationId, userId, role });
