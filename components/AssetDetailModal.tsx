@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, lazy, Suspense } from 'react';
-import { Asset, AssetType, LoanRecord, RepairEntry, UserRole } from '../types';
+import { Asset, AssetType, AssetTypeLabels, LoanRecord, RepairEntry, UserRole } from '../types';
 import MaintenanceTimeline from './MaintenanceTimeline';
 import { createMaintenanceEvent, updateMaintenanceEvent, deleteMaintenanceEvent } from '../services/supabaseAssetService';
 import { uploadAssetImage, deleteAssetImage } from '../services/supabaseStorageService';
