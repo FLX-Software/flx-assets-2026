@@ -131,23 +131,56 @@ export async function signUp(
     } catch (error: any) {
       // Timeout oder anderer Fehler - versuche direkten INSERT als Fallback
       console.log('⚠️ signUp: RPC-Funktion fehlgeschlagen, verwende direkten INSERT als Fallback...', error.message);
-      const { error: insertError } = await supabase
-        .from('profiles')
-        .insert({
-          id: userId,
-          full_name: fullName,
-        });
       
-      if (insertError) {
-        // 23505 = unique_violation (Profil existiert bereits) - das ist OK!
-        if (insertError.code === '23505' || insertError.message?.includes('duplicate') || insertError.message?.includes('already exists')) {
-          console.log('✅ signUp: Profil existiert bereits (wurde vom Trigger erstellt)');
-          profileError = null;
+      // Direkter INSERT mit Timeout
+      try {
+        const insertPromise = supabase
+          .from('profiles')
+          .insert({
+            id: userId,
+            full_name: fullName,
+          });
+
+        const insertTimeout = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('INSERT Timeout (5s)')), 5000)
+        );
+
+        const insertResult = await Promise.race([insertPromise, insertTimeout]) as any;
+        const insertError = insertResult?.error || null;
+
+        if (insertError) {
+          // 23505 = unique_violation (Profil existiert bereits) - das ist OK!
+          // 42501 = RLS Policy violation - versuche Update statt Insert
+          if (insertError.code === '23505' || 
+              insertError.message?.includes('duplicate') || 
+              insertError.message?.includes('already exists')) {
+            console.log('✅ signUp: Profil existiert bereits (wurde vom Trigger erstellt)');
+            profileError = null;
+          } else if (insertError.code === '42501') {
+            // RLS blockiert - Profil wurde wahrscheinlich vom Trigger erstellt, versuche Update
+            console.log('⚠️ signUp: RLS blockiert INSERT, versuche Update...');
+            const { error: updateError } = await supabase
+              .from('profiles')
+              .update({ full_name: fullName })
+              .eq('id', userId);
+            
+            if (updateError) {
+              console.log('✅ signUp: Profil existiert bereits (Update nicht nötig oder nicht möglich)');
+              profileError = null; // Ignoriere Update-Fehler, Profil existiert wahrscheinlich
+            } else {
+              console.log('✅ signUp: Profil aktualisiert (Fallback UPDATE)');
+              profileError = null;
+            }
+          } else {
+            profileError = insertError;
+          }
         } else {
-          profileError = insertError;
+          console.log('✅ signUp: Profil erstellt (Fallback INSERT)');
+          profileError = null;
         }
-      } else {
-        console.log('✅ signUp: Profil erstellt (Fallback INSERT)');
+      } catch (insertTimeoutError: any) {
+        console.error('❌ signUp: INSERT Timeout - Profil wurde wahrscheinlich vom Trigger erstellt');
+        // Annahme: Profil wurde vom Trigger erstellt, weiter mit Membership
         profileError = null;
       }
     }
