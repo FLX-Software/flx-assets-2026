@@ -1005,7 +1005,7 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
 
               {/* Edit Mode: Alle Felder bearbeitbar */}
               {editMode && (
-                <form onSubmit={handleSubmit} className="space-y-6">
+                <form id="asset-detail-edit-form" onSubmit={handleSubmit} className="space-y-6">
                   <div className="space-y-4">
                       {/* Allgemeine Felder */}
                       <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800">
@@ -1315,19 +1315,6 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
                         </div>
                       )}
 
-                      <div className="flex gap-2 pt-4 border-t border-slate-200 dark:border-slate-800">
-                        <button type="button" onClick={() => { setEditMode(false); setFormData({...asset}); setSelectedFile(null); }} disabled={isUploadingImage} className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-black rounded-xl uppercase text-[10px] tracking-tighter italic disabled:opacity-50">Abbrechen</button>
-                        <button type="submit" disabled={isUploadingImage} className="flex-1 py-3 bg-blue-600 text-white font-black rounded-xl uppercase text-[10px] tracking-tighter italic shadow-lg shadow-blue-600/20 disabled:opacity-50 flex items-center justify-center gap-2">
-                          {isUploadingImage ? (
-                            <>
-                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                              Upload...
-                            </>
-                          ) : (
-                            'Sichern'
-                          )}
-                        </button>
-                      </div>
                       {selectedFile && (
                         <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-900">
                           <p className="text-xs font-bold text-blue-700 dark:text-blue-300">
@@ -1406,12 +1393,26 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
           )}
         </div>
 
-        <div className="p-6 bg-slate-50 dark:bg-[#010409] border-t border-slate-100 dark:border-slate-800 flex justify-between items-center">
+        <div className="p-6 bg-slate-50 dark:bg-[#010409] border-t border-slate-100 dark:border-slate-800 flex justify-between items-center shrink-0">
           <div className="flex items-center gap-2">
             <span className={`w-2.5 h-2.5 rounded-full ${formData.status === 'available' ? 'bg-emerald-500' : 'bg-rose-500 animate-pulse'}`}></span>
             <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">{formData.status === 'available' ? 'Lager' : 'Einsatz'}</span>
           </div>
-          <button onClick={onClose} className="px-8 py-2.5 bg-slate-900 dark:bg-slate-800 hover:bg-black text-white font-black rounded-xl uppercase text-xs tracking-tighter italic transition-all">Schließen</button>
+          <div className="flex items-center gap-3">
+            {editMode && activeTab === 'info' && (
+              <>
+                <button type="button" onClick={() => { setEditMode(false); setFormData({ ...asset }); setSelectedFile(null); }} disabled={isUploadingImage} className="px-6 py-2.5 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-black rounded-xl uppercase text-xs tracking-tighter italic transition-all disabled:opacity-50">
+                  Abbrechen
+                </button>
+                <button type="submit" form="asset-detail-edit-form" disabled={isUploadingImage} className="px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-xl uppercase text-xs tracking-tighter italic shadow-lg shadow-blue-600/20 transition-all disabled:opacity-50 flex items-center justify-center gap-2 min-w-[7rem]">
+                  {isUploadingImage ? (<><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Upload...</>) : 'Speichern'}
+                </button>
+              </>
+            )}
+            <button type="button" onClick={onClose} className="px-8 py-2.5 bg-slate-900 dark:bg-slate-800 hover:bg-black text-white font-black rounded-xl uppercase text-xs tracking-tighter italic transition-all">
+              Schließen
+            </button>
+          </div>
         </div>
       </div>
     </div>
