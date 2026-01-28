@@ -82,6 +82,8 @@ const App: React.FC = () => {
 
   // Auth-State-Listener: Auto-Login nach Reload
   useEffect(() => {
+    const AUTH_CHECK_TIMEOUT_MS = 12000; // Nach 12s ohne Ergebnis → Login anzeigen (kein Endlos-Spinner)
+
     const { data: { subscription } } = onAuthStateChange(async (user) => {
       if (user) {
         setCurrentUser(user);
@@ -97,15 +99,30 @@ const App: React.FC = () => {
       setIsLoading(false);
     });
 
-    // Initial-Check
-    getCurrentUser().then(async (user) => {
-      if (user) {
-        setCurrentUser(user);
-        await loadData(user);
-        await loadAvailableOrganizations(user);
-      }
-      setIsLoading(false);
-    });
+    // Initial-Check mit Timeout: bei ungültiger/fehlender Session oder Hänger → Login, kein Endlos-Laden
+    const timeoutPromise = new Promise<User | null>((_, reject) =>
+      setTimeout(() => reject(new Error('Auth-Check-Timeout')), AUTH_CHECK_TIMEOUT_MS)
+    );
+    Promise.race([getCurrentUser(), timeoutPromise])
+      .then(async (user) => {
+        if (user) {
+          setCurrentUser(user);
+          await loadData(user);
+          await loadAvailableOrganizations(user);
+        }
+        setIsLoading(false);
+      })
+      .catch((err) => {
+        if (err?.message === 'Auth-Check-Timeout') {
+          console.warn('Auth-Check Timeout – zeige Login.');
+        }
+        setCurrentUser(null);
+        setAssets([]);
+        setHistory([]);
+        setUsers([]);
+        setAvailableOrganizations([]);
+        setIsLoading(false);
+      });
 
     return () => {
       subscription.unsubscribe();
@@ -631,6 +648,7 @@ const App: React.FC = () => {
           onClose={() => setIsExportModalOpen(false)}
           assets={assets}
           loans={history}
+          onShowNotification={showNotification}
         />
       )}
 

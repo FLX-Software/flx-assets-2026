@@ -12,6 +12,9 @@ interface ImportModalProps {
 
 type ImportStep = 'upload' | 'preview' | 'importing' | 'complete';
 
+const VALIDATE_CSV_TIMEOUT_MS = 15000;
+const IMPORT_OVERALL_TIMEOUT_MS = 5 * 60 * 1000; // 5 Minuten
+
 const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImportComplete, organizationId, existingAssets }) => {
   const [step, setStep] = useState<ImportStep>('upload');
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
@@ -19,6 +22,7 @@ const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImportComplete, or
   const [isImporting, setIsImporting] = useState(false);
   const [importProgress, setImportProgress] = useState({ current: 0, total: 0 });
   const [importStats, setImportStats] = useState({ success: 0, failed: 0 });
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -26,20 +30,30 @@ const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImportComplete, or
     if (!file) return;
 
     if (!file.name.endsWith('.csv')) {
-      alert('Bitte wählen Sie eine CSV-Datei aus.');
+      setErrorMessage('Bitte wählen Sie eine CSV-Datei aus.');
       return;
     }
 
     setSelectedFile(file);
+    setErrorMessage(null);
 
     try {
       setIsImporting(true);
-      const result = await validateCSVImport(file, existingAssets);
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Validierung wurde nach 15 Sekunden abgebrochen.')), VALIDATE_CSV_TIMEOUT_MS)
+      );
+      const result = await Promise.race([
+        validateCSVImport(file, existingAssets),
+        timeoutPromise,
+      ]);
       setImportResult(result);
       setStep('preview');
     } catch (error: any) {
       console.error('Fehler beim Validieren:', error);
-      alert(`Fehler beim Lesen der CSV-Datei: ${error.message}`);
+      const msg = error?.message || 'Unbekannter Fehler beim Lesen der CSV-Datei.';
+      setErrorMessage(msg);
+      setImportResult(null);
+      setStep('upload');
     } finally {
       setIsImporting(false);
     }
@@ -47,7 +61,7 @@ const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImportComplete, or
 
   const handleStartImport = async () => {
     if (!importResult || importResult.validAssets.length === 0) {
-      alert('Keine gültigen Assets zum Importieren gefunden.');
+      setErrorMessage('Keine gültigen Assets zum Importieren gefunden.');
       return;
     }
 
@@ -55,6 +69,7 @@ const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImportComplete, or
     setIsImporting(true);
     setImportProgress({ current: 0, total: importResult.validAssets.length });
     setImportStats({ success: 0, failed: 0 });
+    setErrorMessage(null);
 
     // Bulk-Import: Kleinere Batches für bessere Performance (20 Assets pro Batch)
     const batchSize = 20;
@@ -65,11 +80,17 @@ const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImportComplete, or
 
     let successCount = 0;
     let failedCount = 0;
+    let abortedByTimeout = false;
 
-    // Importiere Batches sequenziell mit Bulk-Insert
+    const overallTimeoutPromise = new Promise<'timeout'>((resolve) =>
+      setTimeout(() => { abortedByTimeout = true; resolve('timeout'); }, IMPORT_OVERALL_TIMEOUT_MS)
+    );
+
+    const runImport = async (): Promise<void> => {
     console.log(`🚀 Starte Import von ${batches.length} Batches (${importResult.validAssets.length} Assets total)`);
-    
+
     for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
+      if (abortedByTimeout) break;
       const batch = batches[batchIndex];
       const batchStartTime = Date.now();
       
@@ -184,12 +205,29 @@ const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImportComplete, or
         await new Promise(resolve => setTimeout(resolve, 200)); // 200ms Pause
       }
     }
-    
-    console.log(`🎉 Import abgeschlossen! Erfolgreich: ${successCount}, Fehler: ${failedCount}`);
 
-    setStep('complete');
-    setIsImporting(false);
-    onImportComplete({ success: successCount, failed: failedCount });
+    console.log(`🎉 Import abgeschlossen! Erfolgreich: ${successCount}, Fehler: ${failedCount}`);
+    if (!abortedByTimeout) {
+      setStep('complete');
+      setIsImporting(false);
+      onImportComplete({ success: successCount, failed: failedCount });
+    }
+    };
+
+    try {
+      const winner = await Promise.race([runImport(), overallTimeoutPromise]);
+      if (winner === 'timeout') {
+        setErrorMessage('Import abgebrochen: Zeitüberschreitung (5 Min.). Bitte weniger Daten auf einmal importieren oder die Verbindung prüfen.');
+        setStep('complete');
+        setIsImporting(false);
+        onImportComplete({ success: successCount, failed: failedCount });
+      }
+    } catch (e: any) {
+      setErrorMessage(e?.message || 'Import fehlgeschlagen.');
+      setStep('complete');
+      setIsImporting(false);
+      onImportComplete({ success: successCount, failed: failedCount });
+    }
   };
 
   const handleDownloadTemplate = (full: boolean) => {
@@ -215,6 +253,13 @@ const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImportComplete, or
         </div>
 
         <div className="overflow-y-auto p-6 flex-grow custom-scrollbar">
+          {errorMessage && (
+            <div className="mb-4 p-4 bg-rose-100 dark:bg-rose-900/30 border border-rose-300 dark:border-rose-800 rounded-xl text-rose-800 dark:text-rose-200 text-sm font-bold flex items-center gap-2">
+              <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+              <span>{errorMessage}</span>
+              <button type="button" onClick={() => setErrorMessage(null)} className="ml-auto p-1 rounded hover:bg-rose-200 dark:hover:bg-rose-800" aria-label="Schließen">×</button>
+            </div>
+          )}
           {step === 'upload' && (
             <div className="space-y-6">
               <div className="p-6 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-200 dark:border-slate-800">
@@ -421,7 +466,7 @@ const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImportComplete, or
           {step === 'preview' && (
             <>
               <button
-                onClick={() => setStep('upload')}
+                onClick={() => { setStep('upload'); setErrorMessage(null); }}
                 className="px-6 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-black rounded-xl uppercase text-xs tracking-tighter italic transition-all"
               >
                 Zurück

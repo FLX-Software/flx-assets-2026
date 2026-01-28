@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
+import { escapeHtml } from '../lib/sanitize';
 
 interface QRCodeDisplayProps {
   value: string;
@@ -128,7 +129,10 @@ const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({ value, assetName, brand, 
       // Konvertiere Canvas zu Data URL
       const canvasDataUrl = canvas.toDataURL('image/png');
 
-      // Erstelle temporäres Print-Element im aktuellen Dokument
+      // Erstelle temporäres Print-Element – Nutzerdaten (brand, model, value) escapen gegen XSS
+      const safeBrand = escapeHtml(brand);
+      const safeModel = escapeHtml(model);
+      const safeValue = escapeHtml(value);
       const printContainer = document.createElement('div');
       printContainer.style.position = 'fixed';
       printContainer.style.left = '-9999px';
@@ -150,7 +154,7 @@ const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({ value, assetName, brand, 
             margin-bottom: 30px;
             text-transform: uppercase;
             color: #000;
-          ">${brand} ${model}</div>
+          ">${safeBrand} ${safeModel}</div>
           <div style="margin: 20px 0;">
             <img src="${canvasDataUrl}" alt="QR Code" style="width: 400px; height: 400px; display: block; margin: 0 auto;" />
           </div>
@@ -160,7 +164,7 @@ const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({ value, assetName, brand, 
             margin-top: 30px;
             letter-spacing: 2px;
             color: #000;
-          ">${value}</div>
+          ">${safeValue}</div>
         </div>
       `;
 
