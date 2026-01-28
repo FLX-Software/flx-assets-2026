@@ -28,8 +28,9 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const hasUploadedInSessionRef = useRef(false); // 2. Upload in gleicher Sitzung: Storage oft blockiert → Base64
   const [infoSubTab, setInfoSubTab] = useState<'basic' | 'general' | 'vehicle' | 'machine' | 'tool' | 'financial'>('basic');
-  const [imageUpdateKey, setImageUpdateKey] = useState(0); // Key für Bild-Neuladen
+  const [imageUpdateKey, setImageUpdateKey] = useState(0);
 
   // Aktualisiere formData wenn asset-Prop sich ändert (z.B. nach onSave)
   useEffect(() => {
@@ -83,7 +84,7 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
   const handleImageUpload = async () => {
     if (!selectedFile || !isAdmin || isUploadingImage) return;
 
-    const UPLOAD_SAVE_TIMEOUT_MS = 20000; // Gesamt-Timeout: Upload + Speichern (verhindert ewiges Hängen)
+    const UPLOAD_SAVE_TIMEOUT_MS = 25000; // Upload(8s) + Base64 + Save(12s) – bei 2. Upload oft Fallback auf Base64
     const run = async () => {
       console.log('📤 Starte Bild-Upload...', { fileName: selectedFile!.name, size: selectedFile!.size, assetId: formData.id });
       const oldImageUrl = asset.imageUrl;
@@ -97,10 +98,11 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
       const compressedFile = await compressImage(selectedFile!, { maxWidth: 1200, maxHeight: 1200, quality: 0.85 });
       const fileToUpload = compressedFile || selectedFile!;
       const MAX_BASE64_SIZE = 50 * 1024;
-      const shouldUseBase64 = fileToUpload.size < MAX_BASE64_SIZE;
+      const forceBase64AfterFirst = hasUploadedInSessionRef.current; // 2. Bild: Storage-Session oft blockiert
+      const shouldUseBase64 = fileToUpload.size < MAX_BASE64_SIZE || forceBase64AfterFirst;
       let finalImageUrl: string;
       if (shouldUseBase64) {
-        finalImageUrl = await fileToBase64(fileToUpload, { maxWidth: 800, quality: 0.8 });
+        finalImageUrl = await fileToBase64(fileToUpload, { maxWidth: 800, quality: forceBase64AfterFirst ? 0.75 : 0.8 });
       } else {
         const abortController = new AbortController();
         const uploadPromise = uploadAssetImage(fileToUpload, formData.id, organizationId, abortController.signal);
@@ -122,6 +124,7 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
       setSelectedFile(null);
       setImageUpdateKey((k) => k + 1);
       await onSave(updatedAsset);
+      hasUploadedInSessionRef.current = true;
       setFormData((prev) => ({ ...prev, imageUrl: finalImageUrl }));
       setImageUpdateKey((k) => k + 1);
     };
@@ -138,6 +141,7 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
       alert(error?.message || 'Fehler beim Upload.');
     } finally {
       setIsUploadingImage(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 

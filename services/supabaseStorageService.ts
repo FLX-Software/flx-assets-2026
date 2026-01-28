@@ -59,38 +59,44 @@ export async function uploadAssetImage(
     }
 
     const uploadStartTime = Date.now();
-    
-    // Upload zu Supabase Storage mit Timeout-Überwachung
-    // Verwende eine neue File-Instanz um sicherzustellen, dass das File-Objekt frisch ist
+    const UPLOAD_HARD_TIMEOUT_MS = 8000; // Storage-Timeout – bei Hänger (z. B. 2. Upload) schnell Fallback auf Base64
+
     const fileBlob = new Blob([file], { type: file.type });
     const freshFile = new File([fileBlob], file.name, { type: file.type, lastModified: Date.now() });
-    
+
     const uploadPromise = supabase.storage
       .from(BUCKET_NAME)
       .upload(fileName, freshFile, {
         cacheControl: '3600',
-        upsert: false, // Nicht überschreiben, neue Datei erstellen
-        contentType: file.type, // Explizit Content-Type setzen
+        upsert: false,
+        contentType: file.type,
       });
 
-    // Überwache den Upload mit einem Heartbeat
+    const uploadTimeout = new Promise<{ url: null; error: string }>((resolve) =>
+      setTimeout(() => resolve({ url: null, error: 'Upload-Timeout (Storage). Es wird Base64 verwendet.' }), UPLOAD_HARD_TIMEOUT_MS)
+    );
+
     heartbeatInterval = setInterval(() => {
-      if (abortSignal?.aborted) {
-        if (heartbeatInterval) clearInterval(heartbeatInterval);
+      if (abortSignal?.aborted && heartbeatInterval) {
+        clearInterval(heartbeatInterval);
         return;
       }
       const elapsed = Date.now() - uploadStartTime;
       console.log(`⏳ Upload läuft noch... (${Math.round(elapsed / 1000)}s)`);
-    }, 10000); // Alle 10 Sekunden loggen
+    }, 5000);
 
-    // Prüfe auf Abort-Signal
     if (abortSignal?.aborted) {
       if (heartbeatInterval) clearInterval(heartbeatInterval);
       return { url: null, error: 'Upload abgebrochen' };
     }
 
     try {
-      const { data, error } = await uploadPromise;
+      const result = await Promise.race([uploadPromise, uploadTimeout]);
+      if ('url' in result) {
+        if (heartbeatInterval) clearInterval(heartbeatInterval);
+        return result;
+      }
+      const { data, error } = result;
       if (heartbeatInterval) clearInterval(heartbeatInterval);
       
       // Prüfe erneut auf Abort nach dem Upload

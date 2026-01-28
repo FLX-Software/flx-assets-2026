@@ -288,14 +288,19 @@ const App: React.FC = () => {
 
   const handleSaveAsset = async (updatedAsset: Asset) => {
     if (!currentUser?.organizationId) return;
+    const SAVE_TIMEOUT_MS = 12000;
+    const savePromise = updateAsset(updatedAsset, currentUser.organizationId, false);
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('Speichern hat zu lange gedauert. Bitte erneut versuchen.')), SAVE_TIMEOUT_MS)
+    );
     try {
-      await updateAsset(updatedAsset, currentUser.organizationId, false);
+      await Promise.race([savePromise, timeoutPromise]);
       setAssets((prev) => prev.map((a) => (a.id === updatedAsset.id ? updatedAsset : a)));
       setSelectedAsset(updatedAsset);
       showNotification('Asset-Daten wurden aktualisiert.', 'success');
     } catch (error: any) {
       console.error('Fehler beim Speichern:', error);
-      showNotification(error.message || 'Fehler beim Speichern.', 'error');
+      showNotification(error?.message || 'Fehler beim Speichern.', 'error');
     }
   };
 

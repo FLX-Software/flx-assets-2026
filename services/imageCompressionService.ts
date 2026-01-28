@@ -57,6 +57,9 @@ export async function compressImage(
     }
 
     ctx.drawImage(image, 0, 0, width, height);
+    if (image.src && image.src.startsWith('blob:')) {
+      URL.revokeObjectURL(image.src);
+    }
 
     // Konvertiere zu Blob
     const blob = await new Promise<Blob | null>((resolve) => {
