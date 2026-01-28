@@ -45,20 +45,22 @@ body {
   touch-action: pan-y;
 }
 
-/* Datums- und Zeitfelder: gleiche Größe wie Text/Select, kein Überlauf */
+/* Datums- und Zeitfelder: exakt gleiche Höhe/Breite wie Text/Select (p-3 = 0.75rem) */
 input[type="date"],
 input[type="datetime-local"],
 input[type="time"] {
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
-  box-sizing: border-box;
-  /* Gleiche Höhe wie p-3-Inputs (ca. 44px) */
-  height: 2.75rem;
-  min-height: 2.75rem;
-  padding: 0.5rem 0.75rem;
-  font-size: inherit;
-  line-height: 1.25;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+  /* Gleiche Höhe wie Input mit p-3 + text-sm (~2.5rem) */
+  height: 2.5rem !important;
+  min-height: 2.5rem !important;
+  max-height: 2.5rem !important;
+  padding: 0.5625rem 0.75rem !important;
+  font-size: 0.875rem !important;
+  line-height: 1.25 !important;
+  border-radius: 0.75rem;
 }
 
 /* iOS: Kein Zoom bei Fokus, wenn font-size >= 16px */
