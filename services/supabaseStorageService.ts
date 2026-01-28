@@ -38,16 +38,24 @@ export async function uploadAssetImage(
 
     console.log('📤 Upload zu Supabase Storage...', { bucket: BUCKET_NAME, fileName, fileSize: file.size });
 
-    // Prüfe Auth-Session vor Upload
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      console.warn('⚠️ Keine aktive Session, versuche Session zu erneuern...');
-      const { data: { session: newSession }, error: refreshError } = await supabase.auth.refreshSession();
-      if (refreshError || !newSession) {
-        console.error('❌ Konnte Session nicht erneuern:', refreshError);
-        return { url: null, error: 'Keine gültige Session. Bitte melden Sie sich erneut an.' };
+    // Prüfe Auth-Session vor Upload (mit Timeout – verhindert endloses Hängen)
+    const SESSION_TIMEOUT_MS = 6000;
+    const sessionPromise = (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        const { data: { session: newSession }, error: refreshError } = await supabase.auth.refreshSession();
+        if (refreshError || !newSession) {
+          return { url: null as null, error: 'Keine gültige Session. Bitte melden Sie sich erneut an.' as string };
+        }
       }
-      console.log('✅ Session erneuert');
+      return null;
+    })();
+    const sessionTimeout = new Promise<{ url: null; error: string }>((resolve) =>
+      setTimeout(() => resolve({ url: null, error: 'Session-Prüfung hat zu lange gedauert. Bitte Seite neu laden (Strg+F5).' }), SESSION_TIMEOUT_MS)
+    );
+    const sessionResult = await Promise.race([sessionPromise, sessionTimeout]);
+    if (sessionResult) {
+      return sessionResult;
     }
 
     const uploadStartTime = Date.now();

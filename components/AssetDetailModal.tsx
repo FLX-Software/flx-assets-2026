@@ -81,92 +81,61 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
   };
 
   const handleImageUpload = async () => {
-    if (!selectedFile || !isAdmin) return;
+    if (!selectedFile || !isAdmin || isUploadingImage) return;
 
-    try {
-      setIsUploadingImage(true);
-      console.log('📤 Starte Bild-Upload...', { fileName: selectedFile.name, size: selectedFile.size, assetId: formData.id });
-      
-      // Lösche altes Bild (falls es von Supabase Storage ist)
+    const UPLOAD_SAVE_TIMEOUT_MS = 20000; // Gesamt-Timeout: Upload + Speichern (verhindert ewiges Hängen)
+    const run = async () => {
+      console.log('📤 Starte Bild-Upload...', { fileName: selectedFile!.name, size: selectedFile!.size, assetId: formData.id });
       const oldImageUrl = asset.imageUrl;
       if (oldImageUrl && oldImageUrl.includes('supabase.co/storage')) {
         try {
           await deleteAssetImage(oldImageUrl);
-          console.log('✅ Altes Bild gelöscht');
-        } catch (deleteError) {
-          console.warn('⚠️ Fehler beim Löschen des alten Bildes (fortsetzen):', deleteError);
-          // Weiter mit Upload auch wenn Löschen fehlschlägt
+        } catch {
+          // weiter
         }
       }
-
-      // Komprimiere Bild vor Upload für bessere Performance
-      console.log('🖼️ Komprimiere Bild vor Upload...');
-      const compressedFile = await compressImage(selectedFile, { 
-        maxWidth: 1200, 
-        maxHeight: 1200, 
-        quality: 0.85 
-      });
-      const fileToUpload = compressedFile || selectedFile;
-      
-      // Prüfe ob Base64 verwendet werden sollte (nur für kleine Bilder)
-      const MAX_BASE64_SIZE = 50 * 1024; // 50KB
+      const compressedFile = await compressImage(selectedFile!, { maxWidth: 1200, maxHeight: 1200, quality: 0.85 });
+      const fileToUpload = compressedFile || selectedFile!;
+      const MAX_BASE64_SIZE = 50 * 1024;
       const shouldUseBase64 = fileToUpload.size < MAX_BASE64_SIZE;
-      
       let finalImageUrl: string;
-      
       if (shouldUseBase64) {
-        // Kleine Bilder: Direkt als Base64 speichern (schnell)
-        console.log('💾 Bild ist klein genug, verwende Base64 (schneller)...');
         finalImageUrl = await fileToBase64(fileToUpload, { maxWidth: 800, quality: 0.8 });
-        console.log('✅ Base64-Bild erstellt (Größe:', Math.round(finalImageUrl.length / 1024), 'KB)');
       } else {
-        // Größere Bilder: Versuche Upload zu Supabase (mit kurzem Timeout)
-        console.log('📤 Versuche schnellen Upload zu Supabase Storage (8s Timeout)...');
-        
         const abortController = new AbortController();
         const uploadPromise = uploadAssetImage(fileToUpload, formData.id, organizationId, abortController.signal);
         const timeoutPromise = new Promise<{ url: null; error: string }>((resolve) => {
           setTimeout(() => {
             abortController.abort();
-            resolve({ url: null, error: 'Upload-Timeout: Upload dauert zu lange' });
-          }, 8000); // 8 Sekunden Timeout
+            resolve({ url: null, error: 'Upload-Timeout' });
+          }, 8000);
         });
-        
         const uploadResult = await Promise.race([uploadPromise, timeoutPromise]);
-        
         if (uploadResult.error) {
-          // Upload fehlgeschlagen: Verwende komprimiertes Base64
-          console.log('⏩ Upload zu langsam, verwende komprimiertes Base64...');
           finalImageUrl = await fileToBase64(fileToUpload, { maxWidth: 800, quality: 0.75 });
-          console.log('✅ Komprimiertes Base64-Bild erstellt (Größe:', Math.round(finalImageUrl.length / 1024), 'KB)');
         } else {
-          console.log('✅ Upload erfolgreich:', uploadResult.url);
           finalImageUrl = uploadResult.url;
         }
       }
-
-      // Aktualisiere Asset mit neuer Bild-URL
       const updatedAsset = { ...formData, imageUrl: finalImageUrl };
-      
-      // Aktualisiere formData SOFORT, damit die Vorschau sofort das neue Bild anzeigt
       setFormData(updatedAsset);
       setSelectedFile(null);
-      
-      // Aktualisiere Image-Key, um React zu zwingen, das Bild neu zu laden
-      setImageUpdateKey(prev => prev + 1);
-      
-      // Speichere Asset
-      console.log('💾 Speichere Asset mit neuem Bild...');
+      setImageUpdateKey((k) => k + 1);
       await onSave(updatedAsset);
-      console.log('✅ Asset gespeichert');
-      
-      // Stelle sicher, dass formData mit der finalen URL aktualisiert ist und Key aktualisiert wird
-      setFormData(prev => ({ ...prev, imageUrl: finalImageUrl }));
-      setImageUpdateKey(prev => prev + 1);
-      
+      setFormData((prev) => ({ ...prev, imageUrl: finalImageUrl }));
+      setImageUpdateKey((k) => k + 1);
+    };
+
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('Vorgang hat zu lange gedauert. Bitte Seite mit Strg+F5 neu laden und erneut versuchen.')), UPLOAD_SAVE_TIMEOUT_MS)
+    );
+
+    try {
+      setIsUploadingImage(true);
+      await Promise.race([run(), timeoutPromise]);
     } catch (error: any) {
       console.error('❌ Fehler beim Bild-Upload:', error);
-      alert(`Fehler beim Upload: ${error.message || 'Unbekannter Fehler'}`);
+      alert(error?.message || 'Fehler beim Upload.');
     } finally {
       setIsUploadingImage(false);
     }

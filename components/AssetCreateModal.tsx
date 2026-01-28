@@ -76,79 +76,57 @@ const AssetCreateModal: React.FC<AssetCreateModalProps> = ({ onClose, onSave, or
     }
   };
 
+  const UPLOAD_SAVE_TIMEOUT_MS = 20000; // Gesamt-Timeout: Upload + Speichern (verhindert ewiges Hängen)
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.brand || !formData.model || !formData.qrCode) {
       alert("Pflichtfelder fehlen!");
       return;
     }
+    if (isUploading) return;
 
-    try {
-      setIsUploading(true);
-      let imageUrl = formData.imageUrl || ''; // Kein Standardbild - leer lassen wenn nicht vorhanden
-
+    const run = async () => {
+      let imageUrl = formData.imageUrl || '';
       const assetId = `a-${Date.now()}`;
-
       if (selectedFile) {
-        console.log('📤 Starte Bild-Upload...', { fileName: selectedFile.name, size: selectedFile.size });
-        
-        // Komprimiere Bild vor Upload für bessere Performance
-        console.log('🖼️ Komprimiere Bild vor Upload...');
-        const compressedFile = await compressImage(selectedFile, { 
-          maxWidth: 1200, 
-          maxHeight: 1200, 
-          quality: 0.85 
-        });
+        const compressedFile = await compressImage(selectedFile, { maxWidth: 1200, maxHeight: 1200, quality: 0.85 });
         const fileToUpload = compressedFile || selectedFile;
-        
-        // Prüfe ob Base64 verwendet werden sollte (nur für kleine Bilder)
-        const MAX_BASE64_SIZE = 50 * 1024; // 50KB
+        const MAX_BASE64_SIZE = 50 * 1024;
         const shouldUseBase64 = fileToUpload.size < MAX_BASE64_SIZE;
-        
         if (shouldUseBase64) {
-          // Kleine Bilder: Direkt als Base64 speichern (schnell)
-          console.log('💾 Bild ist klein genug, verwende Base64 (schneller)...');
           imageUrl = await fileToBase64(fileToUpload, { maxWidth: 800, quality: 0.8 });
-          console.log('✅ Base64-Bild erstellt (Größe:', Math.round(imageUrl.length / 1024), 'KB)');
         } else {
-          // Größere Bilder: Versuche Upload zu Supabase (mit kurzem Timeout)
-          console.log('📤 Versuche schnellen Upload zu Supabase Storage (8s Timeout)...');
-          
           const abortController = new AbortController();
           const uploadPromise = uploadAssetImage(fileToUpload, assetId, organizationId, abortController.signal);
           const timeoutPromise = new Promise<{ url: null; error: string }>((resolve) => {
             setTimeout(() => {
               abortController.abort();
-              resolve({ url: null, error: 'Upload-Timeout: Upload dauert zu lange' });
-            }, 8000); // 8 Sekunden Timeout
+              resolve({ url: null, error: 'Upload-Timeout' });
+            }, 8000);
           });
-          
           const uploadResult = await Promise.race([uploadPromise, timeoutPromise]);
-          
           if (uploadResult.error) {
-            // Upload fehlgeschlagen: Verwende komprimiertes Base64
-            console.log('⏩ Upload zu langsam, verwende komprimiertes Base64...');
             imageUrl = await fileToBase64(fileToUpload, { maxWidth: 800, quality: 0.75 });
-            console.log('✅ Komprimiertes Base64-Bild erstellt (Größe:', Math.round(imageUrl.length / 1024), 'KB)');
           } else {
-            console.log('✅ Upload erfolgreich:', uploadResult.url);
             imageUrl = uploadResult.url;
           }
         }
       }
-
-      const newAsset: Asset = {
-        ...formData as Asset,
-        id: assetId,
-        imageUrl,
-      };
-      
-      console.log('💾 Speichere Asset...', { id: assetId, brand: newAsset.brand, model: newAsset.model });
+      const newAsset: Asset = { ...formData as Asset, id: assetId, imageUrl };
       await onSave(newAsset);
-      console.log('✅ Asset gespeichert');
+    };
+
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('Vorgang hat zu lange gedauert. Bitte Seite mit Strg+F5 neu laden und erneut versuchen.')), UPLOAD_SAVE_TIMEOUT_MS)
+    );
+
+    try {
+      setIsUploading(true);
+      await Promise.race([run(), timeoutPromise]);
     } catch (error: any) {
       console.error('❌ Fehler beim Upload/Speichern:', error);
-      alert(`Fehler: ${error.message || 'Unbekannter Fehler'}`);
+      alert(error?.message || 'Fehler beim Speichern.');
     } finally {
       setIsUploading(false);
     }
