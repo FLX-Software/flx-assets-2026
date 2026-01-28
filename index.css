@@ -45,10 +45,20 @@ body {
   touch-action: pan-y;
 }
 
-/* Date-Inputs in Modals: Überlauf auf Mobile verhindern */
-input[type="date"] {
+/* Datums- und Zeitfelder: gleiche Größe wie Text/Select, kein Überlauf */
+input[type="date"],
+input[type="datetime-local"],
+input[type="time"] {
+  width: 100%;
   max-width: 100%;
+  min-width: 0;
   box-sizing: border-box;
+  /* Gleiche Höhe wie p-3-Inputs (ca. 44px) */
+  height: 2.75rem;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.75rem;
+  font-size: inherit;
+  line-height: 1.25;
 }
 
 /* iOS: Kein Zoom bei Fokus, wenn font-size >= 16px */

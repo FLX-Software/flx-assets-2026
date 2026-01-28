@@ -88,7 +88,7 @@ const MaintenanceTimeline: React.FC<MaintenanceTimelineProps> = ({ asset, isAdmi
     <div className="space-y-6">
       {/* Maintenance Config Section for Admins */}
       {isAdmin && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-5 bg-slate-50 dark:bg-slate-900/40 rounded-3xl border border-slate-200 dark:border-slate-800 animate-in fade-in duration-300 shadow-sm">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-5 bg-slate-50 dark:bg-slate-900/40 rounded-3xl border border-slate-200 dark:border-slate-800 animate-in fade-in duration-300 shadow-sm min-w-0">
           <div className="space-y-1">
             <label className="block text-[9px] font-black text-blue-500 uppercase tracking-widest ml-1 italic">Wartungs-Intervall</label>
             <select 
@@ -101,31 +101,31 @@ const MaintenanceTimeline: React.FC<MaintenanceTimelineProps> = ({ asset, isAdmi
               ))}
             </select>
           </div>
-          <div className="space-y-1">
+          <div className="space-y-1 min-w-0">
             <label className="block text-[9px] font-black text-blue-500 uppercase tracking-widest ml-1 italic">Letzte UVV Prüfung</label>
             <input 
               type="date"
-              className="w-full p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-black outline-none dark:text-white focus:border-blue-500 transition-colors"
+              className="w-full max-w-full min-w-0 p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-black outline-none dark:text-white focus:border-blue-500 transition-colors"
               value={asset.lastUvv || ''}
               onChange={(e) => onUpdateMaintenanceData?.({ lastUvv: e.target.value })}
             />
           </div>
           {asset.type === AssetType.VEHICLE && (
-            <div className="space-y-1">
+            <div className="space-y-1 min-w-0">
               <label className="block text-[9px] font-black text-amber-500 uppercase tracking-widest ml-1 italic">Nächster TÜV / AU</label>
               <input 
                 type="date"
-                className="w-full p-3 bg-white dark:bg-slate-900 border border-amber-200 dark:border-amber-900/30 rounded-xl text-xs font-black outline-none dark:text-white focus:border-amber-500 transition-colors"
+                className="w-full max-w-full min-w-0 p-3 bg-white dark:bg-slate-900 border border-amber-200 dark:border-amber-900/30 rounded-xl text-xs font-black outline-none dark:text-white focus:border-amber-500 transition-colors"
                 value={asset.nextTuev || ''}
                 onChange={(e) => onUpdateMaintenanceData?.({ nextTuev: e.target.value })}
               />
             </div>
           )}
-          <div className="space-y-1">
+          <div className="space-y-1 min-w-0">
             <label className="block text-[9px] font-black text-blue-500 uppercase tracking-widest ml-1 italic">Nächste Allg. Wartung</label>
             <input 
               type="date"
-              className="w-full p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-black outline-none dark:text-white focus:border-blue-500 transition-colors"
+              className="w-full max-w-full min-w-0 p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-black outline-none dark:text-white focus:border-blue-500 transition-colors"
               value={asset.nextMaintenance || ''}
               onChange={(e) => onUpdateMaintenanceData?.({ nextMaintenance: e.target.value })}
             />
@@ -159,18 +159,18 @@ const MaintenanceTimeline: React.FC<MaintenanceTimelineProps> = ({ asset, isAdmi
             </button>
           </div>
           
-          <div className="grid grid-cols-2 gap-4">
-            <div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 min-w-0">
+            <div className="min-w-0">
               <label className="block text-[9px] font-black text-slate-400 uppercase mb-1">Datum</label>
               <input 
                 type="date" 
                 required
-                className="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold outline-none dark:text-white"
+                className="w-full max-w-full min-w-0 p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold outline-none dark:text-white"
                 value={formData.date}
                 onChange={e => setFormData({...formData, date: e.target.value})}
               />
             </div>
-            <div>
+            <div className="min-w-0">
               <label className="block text-[9px] font-black text-slate-400 uppercase mb-1">Kosten (€)</label>
               <input 
                 type="number" 
