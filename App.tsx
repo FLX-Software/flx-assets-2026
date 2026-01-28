@@ -423,11 +423,6 @@ const App: React.FC = () => {
               <span className="font-black text-xl sm:text-2xl tracking-tighter uppercase leading-none italic">
                 FLX-<span className="text-blue-500">ASSETS</span>
               </span>
-              {currentUser.organizationName && (
-                <span className="text-xs sm:text-sm font-black text-white uppercase italic tracking-tighter border-l-2 border-blue-500/40 pl-2.5 ml-1">
-                  {currentUser.organizationName}
-                </span>
-              )}
             </div>
             <span className="text-[9px] tracking-[0.3em] font-black text-blue-500/40 uppercase">Alles im Griff</span>
           </div>
