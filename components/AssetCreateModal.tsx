@@ -134,8 +134,8 @@ const AssetCreateModal: React.FC<AssetCreateModalProps> = ({ onClose, onSave, or
                   </div>
 
                   <div className="space-y-4 min-w-0">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 min-w-0">
-<div className="min-w-0">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 min-w-0">
+                      <div className="min-w-0">
                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Marke *</label>
                         <input type="text" name="brand" value={formData.brand} onChange={handleChange} required className="w-full min-w-0 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-bold outline-none dark:text-white" />
                       </div>
@@ -168,7 +168,7 @@ const AssetCreateModal: React.FC<AssetCreateModalProps> = ({ onClose, onSave, or
                       </div>
                     )}
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 min-w-0">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 min-w-0">
                       <div className="min-w-0">
                         <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Wartungsintervall</label>
                         <select name="maintenanceIntervalMonths" value={formData.maintenanceIntervalMonths} onChange={handleChange} className="w-full min-w-0 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-bold outline-none dark:text-white">
@@ -184,14 +184,14 @@ const AssetCreateModal: React.FC<AssetCreateModalProps> = ({ onClose, onSave, or
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 min-w-0">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 min-w-0">
                       <div className="min-w-0">
                         <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Kaufjahr</label>
                         <input type="number" name="purchaseYear" value={formData.purchaseYear} onChange={handleChange} className="w-full min-w-0 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-bold outline-none dark:text-white" />
                       </div>
-                      <div className="min-w-0">
+                      <div className="min-w-0 overflow-hidden">
                         <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Garantie bis</label>
-                        <input type="date" name="warrantyUntil" value={formData.warrantyUntil} onChange={handleChange} className="w-full min-w-0 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-bold outline-none dark:text-white" />
+                        <input type="date" name="warrantyUntil" value={formData.warrantyUntil} onChange={handleChange} className="w-full max-w-full min-w-0 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-bold outline-none dark:text-white" />
                       </div>
                     </div>
                   </div>
@@ -228,9 +228,9 @@ const AssetCreateModal: React.FC<AssetCreateModalProps> = ({ onClose, onSave, or
                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Kostenstelle</label>
                     <input type="text" name="costCenter" value={formData.costCenter || ''} onChange={handleChange} className="w-full min-w-0 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-bold outline-none dark:text-white" />
                   </div>
-                  <div className="min-w-0">
+                  <div className="min-w-0 overflow-hidden">
                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Anschaffungsdatum</label>
-                    <input type="date" name="purchaseDate" value={formData.purchaseDate || ''} onChange={handleChange} className="w-full min-w-0 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-bold outline-none dark:text-white" />
+                    <input type="date" name="purchaseDate" value={formData.purchaseDate || ''} onChange={handleChange} className="w-full max-w-full min-w-0 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-bold outline-none dark:text-white" />
                   </div>
                 </div>
 
@@ -247,18 +247,18 @@ const AssetCreateModal: React.FC<AssetCreateModalProps> = ({ onClose, onSave, or
 
                 <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 min-w-0 overflow-hidden">
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Dokumente vorhanden</label>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 min-w-0">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input type="checkbox" name="hasInvoice" checked={formData.hasInvoice || false} onChange={handleChange} className="w-4 h-4 rounded border-slate-300" />
-                      <span className="text-sm font-bold">Rechnung</span>
+                  <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 min-w-0">
+                    <label className="flex items-center gap-2 cursor-pointer min-w-0 shrink-0">
+                      <input type="checkbox" name="hasInvoice" checked={formData.hasInvoice || false} onChange={handleChange} className="w-4 h-4 rounded border-slate-300 shrink-0" />
+                      <span className="text-sm font-bold min-w-0 break-words">Rechnung</span>
                     </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input type="checkbox" name="hasWarrantyCertificate" checked={formData.hasWarrantyCertificate || false} onChange={handleChange} className="w-4 h-4 rounded border-slate-300" />
-                      <span className="text-sm font-bold">Garantieschein</span>
+                    <label className="flex items-center gap-2 cursor-pointer min-w-0 shrink-0">
+                      <input type="checkbox" name="hasWarrantyCertificate" checked={formData.hasWarrantyCertificate || false} onChange={handleChange} className="w-4 h-4 rounded border-slate-300 shrink-0" />
+                      <span className="text-sm font-bold min-w-0 break-words">Garantieschein</span>
                     </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input type="checkbox" name="hasManual" checked={formData.hasManual || false} onChange={handleChange} className="w-4 h-4 rounded border-slate-300" />
-                      <span className="text-sm font-bold">Bedienungsanleitung</span>
+                    <label className="flex items-center gap-2 cursor-pointer min-w-0 shrink-0">
+                      <input type="checkbox" name="hasManual" checked={formData.hasManual || false} onChange={handleChange} className="w-4 h-4 rounded border-slate-300 shrink-0" />
+                      <span className="text-sm font-bold min-w-0 break-words">Bedienungsanleitung</span>
                     </label>
                   </div>
                 </div>
@@ -459,28 +459,28 @@ const AssetCreateModal: React.FC<AssetCreateModalProps> = ({ onClose, onSave, or
 
                 <div className="p-4 bg-emerald-50/50 dark:bg-emerald-900/10 rounded-xl border border-emerald-100 dark:border-emerald-900/30">
                   <h3 className="text-sm font-black text-emerald-700 dark:text-emerald-400 uppercase italic tracking-tighter mb-4">Zertifikate & Prüfungen</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                    <div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 min-w-0">
+                    <div className="min-w-0">
                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Letzte UVV-Prüfung</label>
-                      <input type="date" name="lastUvvInspection" value={formData.lastUvvInspection || ''} onChange={handleChange} className="w-full p-3 bg-white dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-bold outline-none dark:text-white" />
+                      <input type="date" name="lastUvvInspection" value={formData.lastUvvInspection || ''} onChange={handleChange} className="w-full max-w-full min-w-0 p-3 bg-white dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-bold outline-none dark:text-white" />
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Nächste UVV-Prüfung</label>
-                      <input type="date" name="nextUvvInspection" value={formData.nextUvvInspection || ''} onChange={handleChange} className="w-full p-3 bg-white dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-bold outline-none dark:text-white" />
+                      <input type="date" name="nextUvvInspection" value={formData.nextUvvInspection || ''} onChange={handleChange} className="w-full max-w-full min-w-0 p-3 bg-white dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-bold outline-none dark:text-white" />
                     </div>
                   </div>
-                  <div className="grid grid-cols-3 gap-3">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input type="checkbox" name="hasCeMarking" checked={formData.hasCeMarking || false} onChange={handleChange} className="w-4 h-4 rounded border-slate-300" />
-                      <span className="text-sm font-bold">CE-Kennzeichnung</span>
+                  <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 min-w-0">
+                    <label className="flex items-center gap-2 cursor-pointer min-w-0 shrink-0">
+                      <input type="checkbox" name="hasCeMarking" checked={formData.hasCeMarking || false} onChange={handleChange} className="w-4 h-4 rounded border-slate-300 shrink-0" />
+                      <span className="text-sm font-bold min-w-0 break-words">CE-Kennzeichnung</span>
                     </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input type="checkbox" name="hasGsMarking" checked={formData.hasGsMarking || false} onChange={handleChange} className="w-4 h-4 rounded border-slate-300" />
-                      <span className="text-sm font-bold">GS-Zeichen</span>
+                    <label className="flex items-center gap-2 cursor-pointer min-w-0 shrink-0">
+                      <input type="checkbox" name="hasGsMarking" checked={formData.hasGsMarking || false} onChange={handleChange} className="w-4 h-4 rounded border-slate-300 shrink-0" />
+                      <span className="text-sm font-bold min-w-0 break-words">GS-Zeichen</span>
                     </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input type="checkbox" name="hasInspectionReport" checked={formData.hasInspectionReport || false} onChange={handleChange} className="w-4 h-4 rounded border-slate-300" />
-                      <span className="text-sm font-bold">Prüfbericht</span>
+                    <label className="flex items-center gap-2 cursor-pointer min-w-0 shrink-0">
+                      <input type="checkbox" name="hasInspectionReport" checked={formData.hasInspectionReport || false} onChange={handleChange} className="w-4 h-4 rounded border-slate-300 shrink-0" />
+                      <span className="text-sm font-bold min-w-0 break-words">Prüfbericht</span>
                     </label>
                   </div>
                 </div>
@@ -534,30 +534,30 @@ const AssetCreateModal: React.FC<AssetCreateModalProps> = ({ onClose, onSave, or
                   </div>
                 </div>
 
-                <div className="p-4 bg-emerald-50/50 dark:bg-emerald-900/10 rounded-xl border border-emerald-100 dark:border-emerald-900/30">
+                <div className="p-4 bg-emerald-50/50 dark:bg-emerald-900/10 rounded-xl border border-emerald-100 dark:border-emerald-900/30 min-w-0 overflow-hidden">
                   <h3 className="text-sm font-black text-emerald-700 dark:text-emerald-400 uppercase italic tracking-tighter mb-4">Zertifikate & Kalibrierung</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                    <div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 min-w-0">
+                    <div className="min-w-0">
                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Letzte Kalibrierung</label>
-                      <input type="date" name="lastCalibration" value={formData.lastCalibration || ''} onChange={handleChange} className="w-full p-3 bg-white dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-bold outline-none dark:text-white" />
+                      <input type="date" name="lastCalibration" value={formData.lastCalibration || ''} onChange={handleChange} className="w-full max-w-full min-w-0 p-3 bg-white dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-bold outline-none dark:text-white" />
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Nächste Kalibrierung</label>
-                      <input type="date" name="nextCalibration" value={formData.nextCalibration || ''} onChange={handleChange} className="w-full p-3 bg-white dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-bold outline-none dark:text-white" />
+                      <input type="date" name="nextCalibration" value={formData.nextCalibration || ''} onChange={handleChange} className="w-full max-w-full min-w-0 p-3 bg-white dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-bold outline-none dark:text-white" />
                     </div>
                   </div>
-                  <div className="grid grid-cols-3 gap-3">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input type="checkbox" name="hasCeMarking" checked={formData.hasCeMarking || false} onChange={handleChange} className="w-4 h-4 rounded border-slate-300" />
-                      <span className="text-sm font-bold">CE-Kennzeichnung</span>
+                  <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 min-w-0">
+                    <label className="flex items-center gap-2 cursor-pointer min-w-0 shrink-0">
+                      <input type="checkbox" name="hasCeMarking" checked={formData.hasCeMarking || false} onChange={handleChange} className="w-4 h-4 rounded border-slate-300 shrink-0" />
+                      <span className="text-sm font-bold min-w-0 break-words">CE-Kennzeichnung</span>
                     </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input type="checkbox" name="hasGsMarking" checked={formData.hasGsMarking || false} onChange={handleChange} className="w-4 h-4 rounded border-slate-300" />
-                      <span className="text-sm font-bold">GS-Zeichen</span>
+                    <label className="flex items-center gap-2 cursor-pointer min-w-0 shrink-0">
+                      <input type="checkbox" name="hasGsMarking" checked={formData.hasGsMarking || false} onChange={handleChange} className="w-4 h-4 rounded border-slate-300 shrink-0" />
+                      <span className="text-sm font-bold min-w-0 break-words">GS-Zeichen</span>
                     </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input type="checkbox" name="requiresCalibration" checked={formData.requiresCalibration || false} onChange={handleChange} className="w-4 h-4 rounded border-slate-300" />
-                      <span className="text-sm font-bold">Kalibrierung erforderlich</span>
+                    <label className="flex items-center gap-2 cursor-pointer min-w-0 shrink-0">
+                      <input type="checkbox" name="requiresCalibration" checked={formData.requiresCalibration || false} onChange={handleChange} className="w-4 h-4 rounded border-slate-300 shrink-0" />
+                      <span className="text-sm font-bold min-w-0 break-words">Kalibrierung erforderlich</span>
                     </label>
                   </div>
                 </div>

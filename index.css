@@ -45,6 +45,12 @@ body {
   touch-action: pan-y;
 }
 
+/* Date-Inputs in Modals: Überlauf auf Mobile verhindern */
+input[type="date"] {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
 /* iOS: Kein Zoom bei Fokus, wenn font-size >= 16px */
 @media (max-width: 768px) {
   input:not([type="checkbox"]):not([type="radio"]),
