@@ -1,6 +1,6 @@
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Html5QrcodeScanner } from 'html5-qrcode';
+import { Html5Qrcode } from 'html5-qrcode';
 
 interface QRScannerProps {
   onScan: (decodedText: string) => void;
@@ -8,42 +8,69 @@ interface QRScannerProps {
 }
 
 const QRScanner: React.FC<QRScannerProps> = ({ onScan, onClose }) => {
-  const scannerRef = useRef<Html5QrcodeScanner | null>(null);
+  const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
+  const onScanRef = useRef(onScan);
+  onScanRef.current = onScan;
   const [scanMethod, setScanMethod] = useState<'camera' | 'manual'>('camera');
   const [manualCode, setManualCode] = useState('');
+  const [cameraState, setCameraState] = useState<'idle' | 'requesting' | 'active' | 'denied' | 'error'>('idle');
+
+  const stopCamera = async () => {
+    if (html5QrCodeRef.current?.isScanning) {
+      try {
+        await html5QrCodeRef.current.stop();
+      } catch (e) {
+        console.warn('Scanner stop:', e);
+      }
+      try {
+        html5QrCodeRef.current.clear();
+      } catch (_) {}
+      html5QrCodeRef.current = null;
+    }
+    setCameraState('idle');
+  };
+
+  const startBackCamera = () => {
+    const containerId = 'qr-reader';
+    setCameraState('requesting');
+    const html5QrCode = new Html5Qrcode(containerId, { verbose: false });
+    html5QrCodeRef.current = html5QrCode;
+
+    const config = { fps: 15, qrbox: { width: 250, height: 250 } as const };
+    const cameraConfig: MediaTrackConstraints = { facingMode: 'environment' };
+
+    html5QrCode
+      .start(cameraConfig, config, (decodedText) => {
+        onScanRef.current(decodedText);
+        stopCamera();
+      }, () => {})
+      .then(() => setCameraState('active'))
+      .catch((err: Error) => {
+        console.warn('Kamera-Start:', err);
+        html5QrCodeRef.current = null;
+        const msg = err?.message?.toLowerCase() || '';
+        setCameraState(msg.includes('permission') || msg.includes('not allowed') || msg.includes('denied') ? 'denied' : 'error');
+      });
+  };
 
   useEffect(() => {
     if (scanMethod === 'camera') {
-      scannerRef.current = new Html5QrcodeScanner(
-        "qr-reader",
-        { fps: 15, qrbox: { width: 250, height: 250 } },
-        /* verbose= */ false
-      );
-
-      scannerRef.current.render(
-        (decodedText) => {
-          onScan(decodedText);
-          if (scannerRef.current) {
-            scannerRef.current.clear();
-          }
-        },
-        (errorMessage) => {}
-      );
+      startBackCamera();
     }
-
     return () => {
-      if (scannerRef.current) {
-        scannerRef.current.clear().catch(err => console.error("Failed to clear scanner", err));
-        scannerRef.current = null;
-      }
+      stopCamera();
     };
-  }, [onScan, scanMethod]);
+  }, [scanMethod]); // startBackCamera/stopCamera nutzen Refs, keine weiteren Deps nötig
 
   const handleManualSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (manualCode.trim()) {
       onScan(manualCode.trim());
     }
+  };
+
+  const handleSwitchToCamera = () => {
+    setScanMethod('camera');
   };
 
   return (
@@ -56,22 +83,22 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScan, onClose }) => {
             <div className="w-2.5 h-2.5 bg-blue-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(0,145,255,0.8)]"></div>
             <span className="font-black text-white uppercase italic tracking-tighter text-lg">FLX <span className="text-blue-500">Scanner</span></span>
           </div>
-          <button onClick={onClose} className="bg-white/10 p-2.5 rounded-2xl text-white hover:bg-rose-600 transition-all">
+          <button onClick={() => { stopCamera(); onClose(); }} className="bg-white/10 p-2.5 rounded-2xl text-white hover:bg-rose-600 transition-all">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
         </div>
 
-        {/* Tab Switcher */}
+        {/* Tab: Kamera / Eingabe – Kamera nicht auswählbar, nur Eingabe als Alternative */}
         <div className="flex p-1.5 bg-slate-100 dark:bg-slate-900 m-6 rounded-2xl border border-slate-200 dark:border-slate-800">
           <button 
-            onClick={() => setScanMethod('camera')}
+            onClick={handleSwitchToCamera}
             className={`flex-1 py-3 text-[10px] font-black uppercase italic tracking-widest rounded-xl transition-all flex items-center justify-center gap-2 ${scanMethod === 'camera' ? 'bg-white dark:bg-slate-800 shadow-md text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'}`}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
             Kamera
           </button>
           <button 
-            onClick={() => setScanMethod('manual')}
+            onClick={() => { setScanMethod('manual'); stopCamera(); }}
             className={`flex-1 py-3 text-[10px] font-black uppercase italic tracking-widest rounded-xl transition-all flex items-center justify-center gap-2 ${scanMethod === 'manual' ? 'bg-white dark:bg-slate-800 shadow-md text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'}`}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
@@ -83,13 +110,33 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScan, onClose }) => {
         <div className="flex-grow flex flex-col min-h-[300px]">
           {scanMethod === 'camera' ? (
             <div className="px-6 pb-6">
-              <div id="qr-reader" className="w-full rounded-3xl overflow-hidden border-2 border-slate-100 dark:border-slate-800"></div>
-              <div className="mt-6 text-center">
-                <p className="text-slate-900 dark:text-white font-black uppercase italic tracking-tighter text-lg mb-1">Kamera aktiv</p>
-                <p className="text-slate-400 dark:text-slate-500 text-[10px] font-bold uppercase tracking-widest leading-relaxed px-4">
-                  Richten Sie das Fadenkreuz auf den QR-Code am Gerät aus.
-                </p>
-              </div>
+              <div id="qr-reader" className="w-full rounded-3xl overflow-hidden border-2 border-slate-100 dark:border-slate-800 min-h-[250px] [&_.qr-shaded-region]:!border-[length:var(--box-size)] [&_video]:!rounded-2xl"></div>
+              {cameraState === 'requesting' && (
+                <div className="mt-4 text-center">
+                  <p className="text-amber-600 dark:text-amber-400 font-black uppercase italic tracking-tighter text-sm">Kameraberechtigung</p>
+                  <p className="text-slate-500 dark:text-slate-400 text-[10px] font-bold mt-1">Bitte „Erlauben“ wählen, um die Rückkamera zu nutzen.</p>
+                </div>
+              )}
+              {cameraState === 'denied' && (
+                <div className="mt-4 text-center">
+                  <p className="text-rose-600 dark:text-rose-400 font-black uppercase italic text-sm">Kamera verweigert</p>
+                  <p className="text-slate-500 dark:text-slate-400 text-[10px] font-bold mt-1">Kamera-Zugriff in den Browsereinstellungen erlauben oder Code unten eingeben.</p>
+                </div>
+              )}
+              {cameraState === 'error' && (
+                <div className="mt-4 text-center">
+                  <p className="text-rose-600 dark:text-rose-400 font-black uppercase italic text-sm">Kamera fehler</p>
+                  <p className="text-slate-500 dark:text-slate-400 text-[10px] font-bold mt-1">Kamera konnte nicht gestartet werden. Nutzen Sie „Eingabe“ für die manuelle Code-Eingabe.</p>
+                </div>
+              )}
+              {(cameraState === 'active' || cameraState === 'idle') && !(cameraState === 'denied' || cameraState === 'error') && (
+                <div className="mt-6 text-center">
+                  <p className="text-slate-900 dark:text-white font-black uppercase italic tracking-tighter text-lg mb-1">Rückkamera aktiv</p>
+                  <p className="text-slate-400 dark:text-slate-500 text-[10px] font-bold uppercase tracking-widest leading-relaxed px-4">
+                    Fadenkreuz auf den QR-Code am Gerät richten.
+                  </p>
+                </div>
+              )}
             </div>
           ) : (
             <form onSubmit={handleManualSubmit} className="p-8 flex flex-col justify-center flex-grow animate-in slide-in-from-bottom-4 duration-300">
@@ -99,7 +146,7 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScan, onClose }) => {
                     <svg className="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                   </div>
                   <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase italic tracking-tighter">Manuelle Identifikation</h3>
-                  <p className="text-slate-400 dark:text-slate-500 text-[10px] font-bold uppercase tracking-widest mt-1">Geben Sie den Code vom Asset-Label ein</p>
+                  <p className="text-slate-400 dark:text-slate-500 text-[10px] font-bold uppercase tracking-widest mt-1">Code vom Asset-Label eingeben</p>
                 </div>
                 
                 <div className="space-y-2">
