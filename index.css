@@ -12,8 +12,26 @@
   --sal: env(safe-area-inset-left);
 }
 
+html {
+  background-color: #f8fafc;
+  overflow-x: hidden;
+  overscroll-behavior: none;
+}
+html.dark {
+  background-color: #010409;
+}
+
 body {
   font-family: 'Inter', sans-serif;
+  overflow-x: hidden;
+  overscroll-behavior: none;
+}
+
+@media (max-width: 768px) {
+  html, body {
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
+  }
 }
 
 /* Mindest-Touchfläche 44×44px (WCAG/Apple) */

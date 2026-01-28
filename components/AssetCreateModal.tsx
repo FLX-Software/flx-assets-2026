@@ -90,7 +90,7 @@ const AssetCreateModal: React.FC<AssetCreateModalProps> = ({ onClose, onSave, or
 
         {/* Tabs */}
         <div className="px-4 sm:px-6 pt-4 border-b border-slate-200 dark:border-slate-800 shrink-0">
-          <div className="flex gap-2 overflow-x-auto custom-scrollbar">
+          <div className="flex flex-wrap gap-2 overflow-x-hidden">
             {tabs.map(tab => {
               const isActive = activeTab === tab.id;
               const isRelevant = 

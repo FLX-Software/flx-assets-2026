@@ -7,6 +7,15 @@ import { createMaintenanceEvent, updateMaintenanceEvent, deleteMaintenanceEvent 
 // Lazy Loading für QRCodeDisplay um Initial-Loading zu vermeiden
 const QRCodeDisplay = lazy(() => import('./QRCodeDisplay'));
 
+/** Vergleicht Formular-Asset mit Original (ohne repairHistory) – für "nur bei Änderung speichern" */
+function formDataEqualsAsset(a: Asset, b: Asset): boolean {
+  const { repairHistory: _ra, ...restA } = a as Asset & { repairHistory?: unknown };
+  const { repairHistory: _rb, ...restB } = b as Asset & { repairHistory?: unknown };
+  const toSorted = (obj: Record<string, unknown>) =>
+    Object.keys(obj).sort().reduce((acc, k) => ({ ...acc, [k]: (obj as Record<string, unknown>)[k] }), {} as Record<string, unknown>);
+  return JSON.stringify(toSorted(restA as Record<string, unknown>)) === JSON.stringify(toSorted(restB as Record<string, unknown>));
+}
+
 interface AssetDetailModalProps {
   asset: Asset;
   history: LoanRecord[];
@@ -65,6 +74,10 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (formDataEqualsAsset(formData, asset)) {
+      setEditMode(false);
+      return;
+    }
     try {
       await onSave(formData);
       setEditMode(false);
@@ -98,7 +111,7 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
 
         {/* Tabs */}
         <div className="px-4 sm:px-6 pt-4 border-b border-slate-200 dark:border-slate-800 shrink-0">
-          <div className="flex gap-2 overflow-x-auto custom-scrollbar">
+          <div className="flex flex-wrap gap-2 overflow-x-hidden">
             <button 
               onClick={() => { setActiveTab('info'); setIsConfirmingDelete(false); }}
               className={`px-4 py-2 rounded-xl text-sm font-black uppercase italic tracking-tighter transition-all whitespace-nowrap ${
@@ -172,7 +185,7 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
 
               {/* Info Sub-Tabs */}
               {!editMode && (
-                <div className="flex gap-2 overflow-x-auto custom-scrollbar pb-4">
+                <div className="flex flex-wrap gap-2 overflow-x-hidden pb-4">
                   {[
                     { id: 'basic' as const, label: 'Basis', icon: '📋' },
                     { id: 'general' as const, label: 'Allgemein', icon: '📝' },

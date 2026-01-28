@@ -397,7 +397,7 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen pb-12 bg-slate-50 dark:bg-[#010409] text-slate-900 dark:text-slate-100 transition-colors duration-300">
+    <div className="min-h-screen pb-12 bg-slate-50 dark:bg-[#010409] text-slate-900 dark:text-slate-100 transition-colors duration-300 overflow-x-hidden">
       {/* Navigation / Header */}
       <nav className="bg-[#010409] text-white pt-[max(1rem,env(safe-area-inset-top))] px-4 pb-4 sticky top-0 z-30 shadow-2xl border-b border-blue-900/30">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
