@@ -14,13 +14,14 @@ interface AssetDetailModalProps {
   history: LoanRecord[];
   onClose: () => void;
   onSave: (updatedAsset: Asset) => void;
+  onSaveImageUrl?: (assetId: string, imageUrl: string) => Promise<void>;
   onDelete: (id: string) => void;
   onReturn?: (asset: Asset) => void;
   isAdmin: boolean;
   organizationId: string;
 }
 
-const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onClose, onSave, onDelete, onReturn, isAdmin, organizationId }) => {
+const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onClose, onSave, onSaveImageUrl, onDelete, onReturn, isAdmin, organizationId }) => {
   const [activeTab, setActiveTab] = useState<'info' | 'history' | 'maintenance' | 'qr'>('info');
   const [editMode, setEditMode] = useState(false);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
@@ -84,7 +85,7 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
   const handleImageUpload = async () => {
     if (!selectedFile || !isAdmin || isUploadingImage) return;
 
-    const UPLOAD_SAVE_TIMEOUT_MS = 25000; // Upload(8s) + Base64 + Save(12s) – bei 2. Upload oft Fallback auf Base64
+    const UPLOAD_SAVE_TIMEOUT_MS = 40000; // Upload/Base64 + Save(bis 25s bei großem Bild)
     const run = async () => {
       console.log('📤 Starte Bild-Upload...', { fileName: selectedFile!.name, size: selectedFile!.size, assetId: formData.id });
       const oldImageUrl = asset.imageUrl;
@@ -119,18 +120,21 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
           finalImageUrl = uploadResult.url;
         }
       }
-      const updatedAsset = { ...formData, imageUrl: finalImageUrl };
-      setFormData(updatedAsset);
+      setFormData((prev) => ({ ...prev, imageUrl: finalImageUrl }));
       setSelectedFile(null);
       setImageUpdateKey((k) => k + 1);
-      await onSave(updatedAsset);
+      if (onSaveImageUrl) {
+        await onSaveImageUrl(formData.id, finalImageUrl);
+      } else {
+        await onSave({ ...formData, imageUrl: finalImageUrl });
+      }
       hasUploadedInSessionRef.current = true;
-      setFormData((prev) => ({ ...prev, imageUrl: finalImageUrl }));
       setImageUpdateKey((k) => k + 1);
     };
 
+    const UPLOAD_SAVE_TIMEOUT_MS = 30000;
     const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('Vorgang hat zu lange gedauert. Bitte Seite mit Strg+F5 neu laden und erneut versuchen.')), UPLOAD_SAVE_TIMEOUT_MS)
+      setTimeout(() => reject(new Error('Vorgang hat zu lange gedauert. Bitte erneut versuchen.')), UPLOAD_SAVE_TIMEOUT_MS)
     );
 
     try {

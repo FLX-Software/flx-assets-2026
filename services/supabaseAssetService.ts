@@ -241,6 +241,27 @@ export async function updateAsset(
 }
 
 /**
+ * Aktualisiert nur die Bild-URL eines Assets (minimaler Payload, schnell).
+ * Für Bild-Uploads statt volles updateAsset verwenden.
+ */
+export async function updateAssetImageUrl(
+  assetId: string,
+  organizationId: string,
+  imageUrl: string
+): Promise<void> {
+  const { error } = await supabase
+    .from('assets')
+    .update({ image_url: imageUrl })
+    .eq('id', assetId)
+    .eq('organization_id', organizationId);
+
+  if (error) {
+    console.error('❌ Fehler beim Aktualisieren der Bild-URL:', error);
+    throw error;
+  }
+}
+
+/**
  * Löscht ein Asset
  */
 export async function deleteAsset(assetId: string): Promise<void> {

@@ -13,7 +13,7 @@ import ImportModal from './components/ImportModal';
 import Login from './components/Login';
 import { processQRScan } from './services/supabaseInventoryService';
 import { getCurrentUser, signOut, onAuthStateChange, loadUserWithOrganizations } from './services/supabaseAuthService';
-import { fetchAssets, fetchAsset, createAsset, updateAsset, deleteAsset } from './services/supabaseAssetService';
+import { fetchAssets, fetchAsset, createAsset, updateAsset, updateAssetImageUrl, deleteAsset } from './services/supabaseAssetService';
 import { deleteAssetImage } from './services/supabaseStorageService';
 import { fetchLoans } from './services/supabaseLoanService';
 import { fetchOrganizationMembers, fetchUserOrganizations, fetchAllOrganizations } from './services/supabaseOrganizationService';
@@ -288,19 +288,28 @@ const App: React.FC = () => {
 
   const handleSaveAsset = async (updatedAsset: Asset) => {
     if (!currentUser?.organizationId) return;
-    const SAVE_TIMEOUT_MS = 12000;
-    const savePromise = updateAsset(updatedAsset, currentUser.organizationId, false);
-    const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('Speichern hat zu lange gedauert. Bitte erneut versuchen.')), SAVE_TIMEOUT_MS)
-    );
     try {
-      await Promise.race([savePromise, timeoutPromise]);
+      await updateAsset(updatedAsset, currentUser.organizationId, false);
       setAssets((prev) => prev.map((a) => (a.id === updatedAsset.id ? updatedAsset : a)));
       setSelectedAsset(updatedAsset);
       showNotification('Asset-Daten wurden aktualisiert.', 'success');
     } catch (error: any) {
       console.error('Fehler beim Speichern:', error);
       showNotification(error?.message || 'Fehler beim Speichern.', 'error');
+    }
+  };
+
+  const handleSaveAssetImageUrl = async (assetId: string, imageUrl: string) => {
+    if (!currentUser?.organizationId) return;
+    try {
+      await updateAssetImageUrl(assetId, currentUser.organizationId, imageUrl);
+      setAssets((prev) => prev.map((a) => (a.id === assetId ? { ...a, imageUrl } : a)));
+      setSelectedAsset((prev) => (prev?.id === assetId ? { ...prev, imageUrl } : prev));
+      showNotification('Bild wurde aktualisiert.', 'success');
+    } catch (error: any) {
+      console.error('Fehler beim Speichern des Bildes:', error);
+      showNotification(error?.message || 'Fehler beim Speichern des Bildes.', 'error');
+      throw error;
     }
   };
 
@@ -618,6 +627,7 @@ const App: React.FC = () => {
           history={history}
           onClose={() => setSelectedAsset(null)} 
           onSave={handleSaveAsset}
+          onSaveImageUrl={handleSaveAssetImageUrl}
           onDelete={handleDeleteAsset}
           onReturn={handleReturnAsset}
           isAdmin={currentUser.role === UserRole.ADMIN || currentUser.role === UserRole.SUPER_ADMIN}
