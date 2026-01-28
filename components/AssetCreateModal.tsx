@@ -1,8 +1,5 @@
-
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { Asset, AssetType, AssetTypeLabels } from '../types';
-import { uploadAssetImage } from '../services/supabaseStorageService';
-import { compressImage, fileToBase64, shouldCompress } from '../services/imageCompressionService';
 
 interface AssetCreateModalProps {
   onClose: () => void;
@@ -20,7 +17,7 @@ const AssetCreateModal: React.FC<AssetCreateModalProps> = ({ onClose, onSave, or
     purchaseYear: new Date().getFullYear(),
     warrantyUntil: new Date(new Date().setFullYear(new Date().getFullYear() + 2)).toISOString().split('T')[0],
     condition: 5,
-    imageUrl: '', // Kein Standardbild - leer lassen
+    imageUrl: '',
     qrCode: `QR_${Math.random().toString(36).substring(2, 9).toUpperCase()}`,
     status: 'available',
     currentUserId: null,
@@ -28,9 +25,6 @@ const AssetCreateModal: React.FC<AssetCreateModalProps> = ({ onClose, onSave, or
     repairHistory: []
   });
 
-  const [isUploading, setIsUploading] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeTab, setActiveTab] = useState<TabType>('basic');
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -54,81 +48,19 @@ const AssetCreateModal: React.FC<AssetCreateModalProps> = ({ onClose, onSave, or
     });
   };
 
-  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setSelectedFile(file);
-      
-      // Komprimiere Bild für Vorschau (schneller)
-      console.log('🖼️ Bereite Bild-Vorschau vor...');
-      const compressed = await compressImage(file, { maxWidth: 400, quality: 0.7 });
-      const fileForPreview = compressed || file;
-      
-      // Zeige komprimierte Vorschau
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData(prev => ({
-          ...prev,
-          imageUrl: reader.result as string
-        }));
-      };
-      reader.readAsDataURL(fileForPreview);
-    }
-  };
-
-  const UPLOAD_SAVE_TIMEOUT_MS = 20000; // Gesamt-Timeout: Upload + Speichern (verhindert ewiges Hängen)
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.brand || !formData.model || !formData.qrCode) {
       alert("Pflichtfelder fehlen!");
       return;
     }
-    if (isUploading) return;
-
-    const run = async () => {
-      let imageUrl = formData.imageUrl || '';
-      const assetId = `a-${Date.now()}`;
-      if (selectedFile) {
-        const compressedFile = await compressImage(selectedFile, { maxWidth: 1200, maxHeight: 1200, quality: 0.85 });
-        const fileToUpload = compressedFile || selectedFile;
-        const MAX_BASE64_SIZE = 50 * 1024;
-        const shouldUseBase64 = fileToUpload.size < MAX_BASE64_SIZE;
-        if (shouldUseBase64) {
-          imageUrl = await fileToBase64(fileToUpload, { maxWidth: 800, quality: 0.8 });
-        } else {
-          const abortController = new AbortController();
-          const uploadPromise = uploadAssetImage(fileToUpload, assetId, organizationId, abortController.signal);
-          const timeoutPromise = new Promise<{ url: null; error: string }>((resolve) => {
-            setTimeout(() => {
-              abortController.abort();
-              resolve({ url: null, error: 'Upload-Timeout' });
-            }, 8000);
-          });
-          const uploadResult = await Promise.race([uploadPromise, timeoutPromise]);
-          if (uploadResult.error) {
-            imageUrl = await fileToBase64(fileToUpload, { maxWidth: 800, quality: 0.75 });
-          } else {
-            imageUrl = uploadResult.url;
-          }
-        }
-      }
-      const newAsset: Asset = { ...formData as Asset, id: assetId, imageUrl };
-      await onSave(newAsset);
-    };
-
-    const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('Vorgang hat zu lange gedauert. Bitte Seite mit Strg+F5 neu laden und erneut versuchen.')), UPLOAD_SAVE_TIMEOUT_MS)
-    );
-
     try {
-      setIsUploading(true);
-      await Promise.race([run(), timeoutPromise]);
+      const assetId = `a-${Date.now()}`;
+      const newAsset: Asset = { ...formData as Asset, id: assetId, imageUrl: '' };
+      await onSave(newAsset);
     } catch (error: any) {
-      console.error('❌ Fehler beim Upload/Speichern:', error);
+      console.error('❌ Fehler beim Speichern:', error);
       alert(error?.message || 'Fehler beim Speichern.');
-    } finally {
-      setIsUploading(false);
     }
   };
 
@@ -193,24 +125,6 @@ const AssetCreateModal: React.FC<AssetCreateModalProps> = ({ onClose, onSave, or
               <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-4">
-                    <div>
-                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Asset Foto</label>
-                      <div onClick={() => fileInputRef.current?.click()} className="relative rounded-2xl overflow-hidden aspect-video shadow-inner bg-slate-100 dark:bg-slate-900 border-2 border-dashed border-slate-200 dark:border-slate-800 cursor-pointer group">
-                        {formData.imageUrl ? (
-                          <img src={formData.imageUrl} alt="Preview" className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <div className="text-center">
-                              <svg className="w-12 h-12 text-slate-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                              </svg>
-                              <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Bild hinzufügen</p>
-                            </div>
-                          </div>
-                        )}
-                        <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageChange} />
-                      </div>
-                    </div>
                     <div className="p-5 bg-blue-50/50 dark:bg-blue-900/10 rounded-2xl border border-blue-100 dark:border-blue-900/30">
                       <label className="block text-[10px] font-black text-blue-400 uppercase tracking-widest mb-2">QR-CODE IDENTIFIER *</label>
                       <input type="text" name="qrCode" value={formData.qrCode} onChange={handleChange} required className="w-full p-3 bg-white dark:bg-slate-900 border border-blue-200 rounded-xl text-xs font-black text-blue-600 uppercase italic outline-none" />
@@ -645,16 +559,9 @@ const AssetCreateModal: React.FC<AssetCreateModalProps> = ({ onClose, onSave, or
             )}
 
             <div className="flex gap-4 mt-6 pt-6 border-t border-slate-100 dark:border-slate-800">
-              <button type="button" onClick={onClose} disabled={isUploading} className="flex-1 py-4 bg-slate-100 dark:bg-slate-800 text-slate-500 font-black rounded-2xl uppercase text-xs tracking-widest italic disabled:opacity-50">Abbrechen</button>
-              <button type="submit" disabled={isUploading} className="flex-[2] py-4 bg-blue-600 text-white font-black rounded-2xl uppercase text-xs tracking-widest italic shadow-xl shadow-blue-600/30 disabled:opacity-50 flex items-center justify-center gap-2">
-                {isUploading ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    Upload...
-                  </>
-                ) : (
-                  'Asset registrieren'
-                )}
+              <button type="button" onClick={onClose} className="flex-1 py-4 bg-slate-100 dark:bg-slate-800 text-slate-500 font-black rounded-2xl uppercase text-xs tracking-widest italic">Abbrechen</button>
+              <button type="submit" className="flex-[2] py-4 bg-blue-600 text-white font-black rounded-2xl uppercase text-xs tracking-widest italic shadow-xl shadow-blue-600/30 flex items-center justify-center gap-2">
+                Asset registrieren
               </button>
             </div>
           </form>

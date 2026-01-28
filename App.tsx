@@ -13,8 +13,7 @@ import ImportModal from './components/ImportModal';
 import Login from './components/Login';
 import { processQRScan } from './services/supabaseInventoryService';
 import { getCurrentUser, signOut, onAuthStateChange, loadUserWithOrganizations } from './services/supabaseAuthService';
-import { fetchAssets, fetchAsset, createAsset, updateAsset, updateAssetImageUrl, deleteAsset } from './services/supabaseAssetService';
-import { deleteAssetImage } from './services/supabaseStorageService';
+import { fetchAssets, fetchAsset, createAsset, updateAsset, deleteAsset } from './services/supabaseAssetService';
 import { fetchLoans } from './services/supabaseLoanService';
 import { fetchOrganizationMembers, fetchUserOrganizations, fetchAllOrganizations } from './services/supabaseOrganizationService';
 
@@ -299,33 +298,6 @@ const App: React.FC = () => {
     }
   };
 
-  const handleSaveAssetImageUrl = async (assetId: string, imageUrl: string) => {
-    if (!currentUser?.organizationId) return;
-    const orgId = currentUser.organizationId;
-    const attempt = async () => {
-      const timeout = 15000;
-      await Promise.race([
-        updateAssetImageUrl(assetId, orgId, imageUrl),
-        new Promise<never>((_, r) => setTimeout(() => r(new Error('Speichern-Timeout')), timeout)),
-      ]);
-    };
-    try {
-      await attempt();
-    } catch (first: any) {
-      await new Promise((r) => setTimeout(r, 2000));
-      try {
-        await attempt();
-      } catch (err: any) {
-        console.error('Fehler beim Speichern des Bildes (nach Retry):', err);
-        showNotification(err?.message || 'Fehler beim Speichern des Bildes.', 'error');
-        throw err;
-      }
-    }
-    setAssets((prev) => prev.map((a) => (a.id === assetId ? { ...a, imageUrl } : a)));
-    setSelectedAsset((prev) => (prev?.id === assetId ? { ...prev, imageUrl } : prev));
-    showNotification('Bild wurde aktualisiert.', 'success');
-  };
-
   const handleCreateAsset = async (newAsset: Asset) => {
     if (!currentUser?.organizationId) return;
     try {
@@ -343,13 +315,6 @@ const App: React.FC = () => {
     if (!currentUser?.organizationId) return;
     const assetToDelete = assets.find((a) => a.id === assetId);
     try {
-      if (assetToDelete?.imageUrl && assetToDelete.imageUrl.includes('supabase.co/storage')) {
-        try {
-          await deleteAssetImage(assetToDelete.imageUrl);
-        } catch (imageError) {
-          console.warn('Fehler beim Löschen des Bildes:', imageError);
-        }
-      }
       await deleteAsset(assetId);
       setAssets((prev) => prev.filter((a) => a.id !== assetId));
       setSelectedAsset(null);
@@ -640,7 +605,6 @@ const App: React.FC = () => {
           history={history}
           onClose={() => setSelectedAsset(null)} 
           onSave={handleSaveAsset}
-          onSaveImageUrl={handleSaveAssetImageUrl}
           onDelete={handleDeleteAsset}
           onReturn={handleReturnAsset}
           isAdmin={currentUser.role === UserRole.ADMIN || currentUser.role === UserRole.SUPER_ADMIN}

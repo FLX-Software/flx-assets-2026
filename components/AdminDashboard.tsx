@@ -205,27 +205,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ assets, users, loans, o
                     onClick={() => onShowDetails(asset)}
                     className="min-w-[240px] bg-white dark:bg-[#0d1117] p-3 rounded-xl border border-rose-200 dark:border-rose-900/50 shadow-sm cursor-pointer hover:border-rose-500 transition-colors"
                   >
-                    <div className="flex items-center gap-4 mb-3">
-                      {asset.imageUrl ? (
-                        <img 
-                          src={asset.imageUrl + (asset.imageUrl.includes('supabase.co') ? `?t=${Date.now()}` : '')} 
-                          className="w-12 h-12 rounded-xl object-cover" 
-                          loading="lazy"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).style.display = 'none';
-                          }}
-                        />
-                      ) : (
-                        <div className="w-12 h-12 rounded-xl bg-slate-200 dark:bg-slate-800 flex items-center justify-center">
-                          <svg className="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                          </svg>
-                        </div>
-                      )}
-                      <div>
-                        <p className="font-black text-xs uppercase italic dark:text-white">{asset.brand} {asset.model}</p>
-                        <p className="text-[10px] font-bold text-rose-600">{asset.licensePlate || asset.qrCode}</p>
-                      </div>
+                    <div className="mb-2">
+                      <p className="font-black text-xs uppercase italic dark:text-white">{asset.brand} {asset.model}</p>
+                      <p className="text-[10px] font-bold text-rose-600">{asset.licensePlate || asset.qrCode}</p>
                     </div>
                     <div className="space-y-1">
                       {getMaintenanceStatus(asset).statusMap.tuev !== 'ok' && (

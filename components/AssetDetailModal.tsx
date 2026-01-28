@@ -1,10 +1,8 @@
 
-import React, { useState, useRef, useEffect, lazy, Suspense } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { Asset, AssetType, AssetTypeLabels, LoanRecord, RepairEntry, UserRole } from '../types';
 import MaintenanceTimeline from './MaintenanceTimeline';
 import { createMaintenanceEvent, updateMaintenanceEvent, deleteMaintenanceEvent } from '../services/supabaseAssetService';
-import { deleteAssetImage } from '../services/supabaseStorageService';
-import { compressImage, fileToBase64, shouldCompress } from '../services/imageCompressionService';
 
 // Lazy Loading für QRCodeDisplay um Initial-Loading zu vermeiden
 const QRCodeDisplay = lazy(() => import('./QRCodeDisplay'));
@@ -14,30 +12,24 @@ interface AssetDetailModalProps {
   history: LoanRecord[];
   onClose: () => void;
   onSave: (updatedAsset: Asset) => void;
-  onSaveImageUrl?: (assetId: string, imageUrl: string) => Promise<void>;
   onDelete: (id: string) => void;
   onReturn?: (asset: Asset) => void;
   isAdmin: boolean;
   organizationId: string;
 }
 
-const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onClose, onSave, onSaveImageUrl, onDelete, onReturn, isAdmin, organizationId }) => {
+const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onClose, onSave, onDelete, onReturn, isAdmin, organizationId }) => {
   const [activeTab, setActiveTab] = useState<'info' | 'history' | 'maintenance' | 'qr'>('info');
   const [editMode, setEditMode] = useState(false);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [formData, setFormData] = useState<Asset>({ ...asset });
-  const [isUploadingImage, setIsUploadingImage] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [infoSubTab, setInfoSubTab] = useState<'basic' | 'general' | 'vehicle' | 'machine' | 'tool' | 'financial'>('basic');
-  const [imageUpdateKey, setImageUpdateKey] = useState(0);
 
-  // Aktualisiere formData wenn asset-Prop sich ändert (z.B. nach onSave)
   useEffect(() => {
     if (asset.id === formData.id) {
       setFormData({ ...asset });
     }
-  }, [asset.id, asset.imageUrl]); // Nur bei Änderung der ID oder imageUrl aktualisieren
+  }, [asset.id]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
@@ -59,73 +51,6 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
     });
   };
 
-  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setSelectedFile(file);
-      
-      // Komprimiere Bild für Vorschau (schneller)
-      console.log('🖼️ Bereite Bild-Vorschau vor...');
-      const compressed = await compressImage(file, { maxWidth: 400, quality: 0.7 });
-      const fileForPreview = compressed || file;
-      
-      // Zeige komprimierte Vorschau
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData(prev => ({
-          ...prev,
-          imageUrl: reader.result as string
-        }));
-      };
-      reader.readAsDataURL(fileForPreview);
-    }
-  };
-
-  const handleImageUpload = async () => {
-    if (!selectedFile || !isAdmin || isUploadingImage) return;
-
-    const UPLOAD_SAVE_TIMEOUT_MS = 30000;
-    const run = async () => {
-      console.log('📤 Starte Bild-Upload...', { fileName: selectedFile!.name, size: selectedFile!.size, assetId: formData.id });
-      const oldImageUrl = asset.imageUrl;
-      if (oldImageUrl && oldImageUrl.includes('supabase.co/storage')) {
-        try {
-          await deleteAssetImage(oldImageUrl);
-        } catch {
-          // weiter
-        }
-      }
-      const compressedFile = await compressImage(selectedFile!, { maxWidth: 1200, maxHeight: 1200, quality: 0.85 });
-      const fileToUpload = compressedFile || selectedFile!;
-      // Immer Base64 im Modal: einheitlicher Ablauf, kein Storage – verhindert „2. Bild hängt“
-      const finalImageUrl = await fileToBase64(fileToUpload, { maxWidth: 800, quality: 0.78 });
-      setFormData((prev) => ({ ...prev, imageUrl: finalImageUrl }));
-      setSelectedFile(null);
-      setImageUpdateKey((k) => k + 1);
-      if (onSaveImageUrl) {
-        await onSaveImageUrl(formData.id, finalImageUrl);
-      } else {
-        await onSave({ ...formData, imageUrl: finalImageUrl });
-      }
-      setImageUpdateKey((k) => k + 1);
-    };
-
-    const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('Vorgang hat zu lange gedauert. Bitte erneut versuchen.')), UPLOAD_SAVE_TIMEOUT_MS)
-    );
-
-    try {
-      setIsUploadingImage(true);
-      await Promise.race([run(), timeoutPromise]);
-    } catch (error: any) {
-      console.error('❌ Fehler beim Bild-Upload:', error);
-      alert(error?.message || 'Fehler beim Upload.');
-    } finally {
-      setIsUploadingImage(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    }
-  };
-
   const handleUpdateRepairHistory = async (updatedHistory: RepairEntry[]) => {
     // Maintenance-Events werden jetzt direkt in Supabase gespeichert
     // Die repairHistory im Asset ist nur für die Anzeige
@@ -143,17 +68,8 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     try {
-      // Wenn ein neues Bild ausgewählt wurde, lade es zuerst hoch
-      if (selectedFile && isAdmin) {
-        await handleImageUpload();
-      } else {
-        console.log('💾 Speichere Asset-Änderungen...', { assetId: formData.id });
-        await onSave(formData);
-        console.log('✅ Asset-Änderungen gespeichert');
-      }
-      
+      await onSave(formData);
       setEditMode(false);
     } catch (error: any) {
       console.error('❌ Fehler beim Speichern:', error);
@@ -293,70 +209,6 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
                     <div className="space-y-6">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-4">
-                          <div>
-                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Asset Foto</label>
-                            <div className="relative rounded-2xl overflow-hidden aspect-video shadow-inner bg-slate-100 dark:bg-slate-900 border-2 border-dashed border-slate-200 dark:border-slate-800">
-                              {formData.imageUrl ? (
-                                <>
-                                  <img 
-                                    key={`edit-${imageUpdateKey}-${formData.imageUrl}`}
-                                    src={formData.imageUrl + (formData.imageUrl.includes('supabase.co') ? `?t=${Date.now()}` : '')} 
-                                    alt={formData.model} 
-                                    className="w-full h-full object-cover"
-                                    onError={(e) => {
-                                      console.warn('⚠️ Bild konnte nicht geladen werden:', formData.imageUrl);
-                                      (e.target as HTMLImageElement).style.display = 'none';
-                                    }}
-                                  />
-                                  <div onClick={() => fileInputRef.current?.click()} className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center cursor-pointer opacity-0 hover:opacity-100 transition-opacity">
-                                    <svg className="w-10 h-10 text-white mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                                    <span className="text-white text-[10px] font-black uppercase tracking-widest">Bild ändern</span>
-                                  </div>
-                                  {isAdmin && (
-                                    <button
-                                      type="button"
-                                      onClick={async (e) => {
-                                        e.stopPropagation();
-                                        if (confirm('Bild wirklich entfernen?')) {
-                                          setFormData(prev => ({ ...prev, imageUrl: '' }));
-                                          setSelectedFile(null);
-                                          if (fileInputRef.current) {
-                                            fileInputRef.current.value = '';
-                                          }
-                                        }
-                                      }}
-                                      className="absolute top-2 right-2 bg-rose-600 hover:bg-rose-700 text-white p-2 rounded-lg shadow-lg transition-all"
-                                      title="Bild entfernen"
-                                    >
-                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                      </svg>
-                                    </button>
-                                  )}
-                                </>
-                              ) : (
-                                <div onClick={() => fileInputRef.current?.click()} className="w-full h-full flex items-center justify-center cursor-pointer">
-                                  <div className="text-center">
-                                    <svg className="w-12 h-12 text-slate-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                    </svg>
-                                    <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Bild hinzufügen</p>
-                                  </div>
-                                </div>
-                              )}
-                              <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageChange} />
-                              {selectedFile && (
-                                <button
-                                  type="button"
-                                  onClick={handleImageUpload}
-                                  disabled={isUploadingImage}
-                                  className="mt-2 w-full py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-400 text-white font-black rounded-lg uppercase text-xs tracking-widest transition-all"
-                                >
-                                  {isUploadingImage ? 'Upload läuft...' : 'Bild hochladen'}
-                                </button>
-                              )}
-                            </div>
-                          </div>
                           <div className="p-5 bg-blue-50/50 dark:bg-blue-900/10 rounded-2xl border border-blue-100 dark:border-blue-900/30">
                             <label className="block text-[10px] font-black text-blue-400 uppercase tracking-widest mb-2">QR-CODE IDENTIFIER *</label>
                             <input type="text" name="qrCode" value={formData.qrCode} onChange={handleChange} required className="w-full p-3 bg-white dark:bg-slate-900 border border-blue-200 rounded-xl text-xs font-black text-blue-600 uppercase italic outline-none" />
@@ -425,45 +277,6 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
                     <div className="space-y-6">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-4">
-                        <div>
-                          <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Asset Foto</label>
-                          <div className="relative rounded-2xl overflow-hidden aspect-video shadow-inner bg-slate-100 dark:bg-slate-900 border-2 border-dashed border-slate-200 dark:border-slate-800">
-                            {formData.imageUrl ? (
-                              <>
-                                <img 
-                                  key={`readonly-${imageUpdateKey}-${formData.imageUrl}`}
-                                  src={formData.imageUrl + (formData.imageUrl.includes('supabase.co') ? `?t=${Date.now()}` : '')} 
-                                  alt={formData.model} 
-                                  className="w-full h-full object-cover"
-                                  onError={(e) => {
-                                    console.warn('⚠️ Bild konnte nicht geladen werden:', formData.imageUrl);
-                                    (e.target as HTMLImageElement).style.display = 'none';
-                                  }}
-                                />
-                                {editMode && (
-                                  <div onClick={() => fileInputRef.current?.click()} className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center cursor-pointer opacity-0 hover:opacity-100 transition-opacity">
-                                    <svg className="w-10 h-10 text-white mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                                    <span className="text-white text-[10px] font-black uppercase tracking-widest">Bild ändern</span>
-                                  </div>
-                                )}
-                              </>
-                            ) : (
-                              <div onClick={() => editMode && fileInputRef.current?.click()} className={`w-full h-full flex items-center justify-center ${editMode ? 'cursor-pointer' : ''}`}>
-                                <div className="text-center">
-                                  <svg className="w-12 h-12 text-slate-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                  </svg>
-                                  {editMode ? (
-                                    <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Bild hinzufügen</p>
-                                  ) : (
-                                    <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Kein Bild</p>
-                                  )}
-                                </div>
-                              </div>
-                            )}
-                            <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageChange} />
-                          </div>
-                        </div>
                         {!editMode && (
                           <div className="p-5 bg-blue-50/50 dark:bg-blue-900/10 rounded-2xl border border-blue-100 dark:border-blue-900/30">
                             <label className="block text-[10px] font-black text-blue-400 uppercase tracking-widest mb-2">QR-CODE IDENTIFIER</label>
@@ -1315,16 +1128,6 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
                         </div>
                       )}
 
-                      {selectedFile && (
-                        <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-900">
-                          <p className="text-xs font-bold text-blue-700 dark:text-blue-300">
-                            📷 Neues Bild ausgewählt: {selectedFile.name}
-                          </p>
-                          <p className="text-[10px] text-blue-600 dark:text-blue-400 mt-1">
-                            Das Bild wird beim Speichern hochgeladen
-                          </p>
-                        </div>
-                      )}
                   </div>
                 </form>
               )}
@@ -1401,11 +1204,11 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
           <div className="flex items-center gap-3">
             {editMode && activeTab === 'info' && (
               <>
-                <button type="button" onClick={() => { setEditMode(false); setFormData({ ...asset }); setSelectedFile(null); }} disabled={isUploadingImage} className="px-6 py-2.5 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-black rounded-xl uppercase text-xs tracking-tighter italic transition-all disabled:opacity-50">
+                <button type="button" onClick={() => { setEditMode(false); setFormData({ ...asset }); }} className="px-6 py-2.5 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-black rounded-xl uppercase text-xs tracking-tighter italic transition-all">
                   Abbrechen
                 </button>
-                <button type="submit" form="asset-detail-edit-form" disabled={isUploadingImage} className="px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-xl uppercase text-xs tracking-tighter italic shadow-lg shadow-blue-600/20 transition-all disabled:opacity-50 flex items-center justify-center gap-2 min-w-[7rem]">
-                  {isUploadingImage ? (<><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Upload...</>) : 'Speichern'}
+                <button type="submit" form="asset-detail-edit-form" className="px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-xl uppercase text-xs tracking-tighter italic shadow-lg shadow-blue-600/20 transition-all flex items-center justify-center gap-2 min-w-[7rem]">
+                  Speichern
                 </button>
               </>
             )}
