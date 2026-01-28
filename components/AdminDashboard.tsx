@@ -207,7 +207,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ assets, users, loans, o
                     className="min-w-[240px] bg-white dark:bg-[#0d1117] p-3 rounded-xl border border-rose-200 dark:border-rose-900/50 shadow-sm cursor-pointer hover:border-rose-500 transition-colors"
                   >
                     <div className="mb-2">
-                      <p className="font-black text-xs uppercase italic dark:text-white">{asset.brand} {asset.model}</p>
+                      <p className="font-black text-xs uppercase italic dark:text-white">
+                        {asset.brand} <span className={asset.status === 'available' ? 'text-blue-600 dark:text-blue-400' : asset.status === 'loaned' ? 'text-amber-600 dark:text-amber-400' : 'text-rose-600 dark:text-rose-400'}>{asset.model}</span>
+                      </p>
                       <p className="text-[10px] font-bold text-rose-600">{asset.licensePlate || asset.qrCode}</p>
                     </div>
                     <div className="space-y-1">

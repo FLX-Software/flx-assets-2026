@@ -90,7 +90,7 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
             <span className="text-blue-500 font-black text-[10px] uppercase tracking-[0.3em] italic block mb-1">Asset Intelligence</span>
             <h2 className="text-2xl font-black text-white uppercase italic tracking-tighter leading-none">
               {editMode ? 'Stammdaten bearbeiten' : (
-                <>{formData.brand} <span className="text-blue-500">{formData.model}</span></>
+                <>{formData.brand} <span className={formData.status === 'available' ? 'text-blue-500' : formData.status === 'loaned' ? 'text-amber-500' : 'text-rose-500'}>{formData.model}</span></>
               )}
             </h2>
           </div>

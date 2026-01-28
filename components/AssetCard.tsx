@@ -11,6 +11,7 @@ interface AssetCardProps {
 
 const AssetCard: React.FC<AssetCardProps> = ({ asset, assignedUser, onAction, actionLabel, onDetails }) => {
   const statusDotColor = asset.status === 'available' ? 'bg-blue-500' : asset.status === 'loaned' ? 'bg-amber-500' : 'bg-rose-500';
+  const modelColor = asset.status === 'available' ? 'text-blue-600 dark:text-blue-400' : asset.status === 'loaned' ? 'text-amber-600 dark:text-amber-400' : 'text-rose-600 dark:text-rose-400';
 
   return (
     <div
@@ -21,7 +22,7 @@ const AssetCard: React.FC<AssetCardProps> = ({ asset, assignedUser, onAction, ac
         <div className="flex justify-between items-start gap-2 mb-2">
           <div className="min-w-0 flex-1">
             <h3 className="font-black text-sm leading-tight text-slate-900 dark:text-white uppercase italic tracking-tighter truncate">
-              {asset.brand} <span className="text-blue-600">{asset.model}</span>
+              {asset.brand} <span className={modelColor}>{asset.model}</span>
             </h3>
             <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 mt-0.5 truncate">{asset.qrCode}</p>
           </div>
