@@ -1,10 +1,17 @@
 import { supabase } from '../lib/supabaseClient';
 import { Asset, DBAsset, RepairEntry, DBMaintenanceEvent, assetToDBAsset, dbAssetToAsset } from '../types';
 
+export type FetchAssetsOptions = { loadMaintenance?: boolean };
+
 /**
- * Lädt alle Assets einer Organisation
+ * Lädt alle Assets einer Organisation.
+ * loadMaintenance: false = kein Laden der maintenance_events (viel schneller für Listen/Übersicht).
  */
-export async function fetchAssets(organizationId: string): Promise<Asset[]> {
+export async function fetchAssets(
+  organizationId: string,
+  options?: FetchAssetsOptions
+): Promise<Asset[]> {
+  const loadMaintenance = options?.loadMaintenance !== false;
   const { data, error } = await supabase
     .from('assets')
     .select('*')
@@ -18,14 +25,16 @@ export async function fetchAssets(organizationId: string): Promise<Asset[]> {
 
   if (!data) return [];
 
-  // Für jedes Asset die Maintenance-Events laden
+  if (!loadMaintenance) {
+    return data.map((dbAsset: DBAsset) => dbAssetToAsset(dbAsset, []));
+  }
+
   const assetsWithMaintenance = await Promise.all(
     data.map(async (dbAsset: DBAsset) => {
       const maintenanceEvents = await fetchMaintenanceEvents(dbAsset.id);
       return dbAssetToAsset(dbAsset, maintenanceEvents);
     })
   );
-
   return assetsWithMaintenance;
 }
 

@@ -13,7 +13,7 @@ import ImportModal from './components/ImportModal';
 import Login from './components/Login';
 import { processQRScan } from './services/supabaseInventoryService';
 import { getCurrentUser, signOut, onAuthStateChange, loadUserWithOrganizations } from './services/supabaseAuthService';
-import { fetchAssets, createAsset, updateAsset, deleteAsset } from './services/supabaseAssetService';
+import { fetchAssets, fetchAsset, createAsset, updateAsset, deleteAsset } from './services/supabaseAssetService';
 import { deleteAssetImage } from './services/supabaseStorageService';
 import { fetchLoans } from './services/supabaseLoanService';
 import { fetchOrganizationMembers, fetchUserOrganizations, fetchAllOrganizations } from './services/supabaseOrganizationService';
@@ -124,7 +124,7 @@ const App: React.FC = () => {
     try {
       if (!skipLoading) setIsLoading(true);
       const [assetsData, loansData, membersData] = await Promise.all([
-        fetchAssets(user.organizationId),
+        fetchAssets(user.organizationId, { loadMaintenance: false }),
         fetchLoans(user.organizationId),
         fetchOrganizationMembers(user.organizationId),
       ]);
@@ -279,80 +279,57 @@ const App: React.FC = () => {
     await handleQRScan(asset.qrCode);
   };
 
+  const handleShowDetails = useCallback((asset: Asset) => {
+    setSelectedAsset(asset);
+    fetchAsset(asset.id).then((full) => {
+      if (full) setSelectedAsset((prev) => (prev?.id === asset.id ? full : prev));
+    });
+  }, []);
+
   const handleSaveAsset = async (updatedAsset: Asset) => {
     if (!currentUser?.organizationId) return;
-    
     try {
-      setIsLoading(true);
-      await updateAsset(updatedAsset, currentUser.organizationId);
-      
-      // Assets neu laden
-      const updatedAssets = await fetchAssets(currentUser.organizationId);
-      setAssets(updatedAssets);
+      await updateAsset(updatedAsset, currentUser.organizationId, false);
+      setAssets((prev) => prev.map((a) => (a.id === updatedAsset.id ? updatedAsset : a)));
       setSelectedAsset(updatedAsset);
-      showNotification("Asset-Daten wurden aktualisiert.", 'success');
+      showNotification('Asset-Daten wurden aktualisiert.', 'success');
     } catch (error: any) {
       console.error('Fehler beim Speichern:', error);
       showNotification(error.message || 'Fehler beim Speichern.', 'error');
-    } finally {
-      setIsLoading(false);
     }
   };
 
   const handleCreateAsset = async (newAsset: Asset) => {
     if (!currentUser?.organizationId) return;
-    
     try {
-      setIsLoading(true);
-      console.log('💾 Erstelle Asset in Supabase...', { id: newAsset.id, brand: newAsset.brand });
-      
-      await createAsset(newAsset, currentUser.organizationId);
-      
-      console.log('✅ Asset erstellt, lade Assets neu...');
-      
-      // Assets neu laden
-      const updatedAssets = await fetchAssets(currentUser.organizationId);
-      setAssets(updatedAssets);
+      const created = await createAsset(newAsset, currentUser.organizationId);
+      setAssets((prev) => [created, ...prev]);
       setIsCreateModalOpen(false);
       showNotification(`Neues Asset "${newAsset.brand} ${newAsset.model}" wurde angelegt.`, 'success');
     } catch (error: any) {
       console.error('❌ Fehler beim Erstellen:', error);
       showNotification(error.message || 'Fehler beim Erstellen.', 'error');
-    } finally {
-      setIsLoading(false);
     }
   };
 
   const handleDeleteAsset = async (assetId: string) => {
     if (!currentUser?.organizationId) return;
-    
-    const assetToDelete = assets.find(a => a.id === assetId);
-    
+    const assetToDelete = assets.find((a) => a.id === assetId);
     try {
-      setIsLoading(true);
-      
-      // Lösche Bild aus Storage (falls vorhanden)
       if (assetToDelete?.imageUrl && assetToDelete.imageUrl.includes('supabase.co/storage')) {
         try {
           await deleteAssetImage(assetToDelete.imageUrl);
         } catch (imageError) {
           console.warn('Fehler beim Löschen des Bildes:', imageError);
-          // Weiter mit Asset-Löschung auch wenn Bild-Löschung fehlschlägt
         }
       }
-      
       await deleteAsset(assetId);
-      
-      // Assets neu laden
-      const updatedAssets = await fetchAssets(currentUser.organizationId);
-      setAssets(updatedAssets);
+      setAssets((prev) => prev.filter((a) => a.id !== assetId));
       setSelectedAsset(null);
       showNotification(`Asset "${assetToDelete?.brand} ${assetToDelete?.model}" wurde gelöscht.`, 'success');
     } catch (error: any) {
       console.error('Fehler beim Löschen:', error);
       showNotification(error.message || 'Fehler beim Löschen.', 'error');
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -576,7 +553,7 @@ const App: React.FC = () => {
             assets={assets} 
             users={users}
             loans={history}
-            onShowDetails={setSelectedAsset} 
+            onShowDetails={handleShowDetails} 
             onAddAsset={() => setIsCreateModalOpen(true)}
             onManageUsers={() => setIsUserMgmtOpen(true)}
             onManageOrganizations={currentUser.role === UserRole.SUPER_ADMIN ? () => setIsOrgMgmtOpen(true) : undefined}
@@ -589,7 +566,7 @@ const App: React.FC = () => {
             currentUser={currentUser} 
             onReturnAsset={handleReturnAsset}
             onStartScan={() => setIsScannerOpen(true)}
-            onShowDetails={setSelectedAsset}
+            onShowDetails={handleShowDetails}
           />
         )}
       </main>
@@ -655,9 +632,8 @@ const App: React.FC = () => {
         <ImportModal
           onClose={() => setIsImportModalOpen(false)}
           onImportComplete={async (stats) => {
-            // Lade Assets neu nach Import
             if (currentUser?.organizationId) {
-              await loadData(currentUser);
+              await loadData(currentUser, { skipLoading: true });
             }
             // Zeige Benachrichtigung nur wenn Assets erfolgreich importiert wurden
             if (stats.success > 0) {
