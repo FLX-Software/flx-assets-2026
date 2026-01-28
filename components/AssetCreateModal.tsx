@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Asset, AssetType, AssetTypeLabels } from '../types';
+import { Asset, AssetType, AssetTypeLabels, AssetStatusLabels, AssetStatus } from '../types';
 
 interface AssetCreateModalProps {
   onClose: () => void;
@@ -147,6 +147,15 @@ const AssetCreateModal: React.FC<AssetCreateModalProps> = ({ onClose, onSave, or
                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Kategorie</label>
                       <select name="type" value={formData.type} onChange={handleChange} className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-bold outline-none dark:text-white">
                         {Object.values(AssetType).map(t => <option key={t} value={t}>{AssetTypeLabels[t]}</option>)}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Status</label>
+                      <select name="status" value={formData.status || 'available'} onChange={handleChange} className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-bold outline-none dark:text-white">
+                        {(['available', 'loaned', 'defective'] as AssetStatus[]).map(s => (
+                          <option key={s} value={s}>{AssetStatusLabels[s]}</option>
+                        ))}
                       </select>
                     </div>
 

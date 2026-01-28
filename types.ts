@@ -12,6 +12,13 @@ export const AssetTypeLabels: Record<AssetType, string> = {
   [AssetType.TOOL]: 'Werkzeug'
 };
 
+export type AssetStatus = 'available' | 'loaned' | 'defective';
+export const AssetStatusLabels: Record<AssetStatus, string> = {
+  available: 'Frei',
+  loaned: 'Verliehen',
+  defective: 'Defekt'
+};
+
 export enum UserRole {
   STAFF = 'staff',
   ADMIN = 'admin',
@@ -45,7 +52,7 @@ export interface DBAsset {
   condition: number | null;
   image_url: string | null;
   qr_string: string;
-  status: 'available' | 'loaned';
+  status: 'available' | 'loaned' | 'defective';
   current_user_id: string | null;
   last_maintenance: string | null;
   next_maintenance: string | null;
@@ -137,7 +144,7 @@ export interface Asset {
   imageUrl: string;
   qrCode: string;
   currentUserId: string | null;
-  status: 'available' | 'loaned';
+  status: 'available' | 'loaned' | 'defective';
   lastMaintenance?: string;
   nextMaintenance?: string;
   nextTuev?: string;

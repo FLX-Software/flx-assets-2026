@@ -321,23 +321,23 @@ export function validateAssetRow(
         asset.mileage = num;
       }
     } else if (fieldName === 'status') {
-      // Status-Validierung: Nur 'available' oder 'loaned' erlaubt
+      // Status-Validierung: 'available', 'loaned' oder 'defective'
       const normalizedStatus = value.toLowerCase().trim();
       if (normalizedStatus === 'available' || normalizedStatus === 'verfügbar' || normalizedStatus === 'lager' || normalizedStatus === 'frei') {
         asset.status = 'available';
       } else if (normalizedStatus === 'loaned' || normalizedStatus === 'ausgeliehen' || normalizedStatus === 'einsatz' || normalizedStatus === 'verliehen') {
         asset.status = 'loaned';
+      } else if (normalizedStatus === 'defective' || normalizedStatus === 'defekt' || normalizedStatus === 'kaputt') {
+        asset.status = 'defective';
       } else if (value && value !== '-' && value !== 'N/A') {
-        // Ungültiger Status-Wert - Warnung und Standard setzen
         warnings.push({
           row: rowIndex + 2,
           field: columnName,
-          message: `Ungültiger Status: "${value}". Verwende Standard "available". Erlaubt: available/verfügbar/lager oder loaned/ausgeliehen/einsatz`,
+          message: `Ungültiger Status: "${value}". Verwende Standard "available". Erlaubt: Frei/available, Verliehen/loaned, Defekt/defective`,
           type: 'warning',
         });
-        asset.status = 'available'; // Standard-Wert
+        asset.status = 'available';
       }
-      // Wenn leer, wird später 'available' gesetzt
     } else {
       // Text-Feld
       if (value && value !== '-' && value !== 'N/A') {
@@ -390,8 +390,8 @@ export function validateAssetRow(
     asset.type = AssetType.TOOL; // Fallback, aber sollte eigentlich gesetzt sein
   }
   // Status: Immer sicherstellen, dass ein gültiger Wert gesetzt ist
-  if (!asset.status || (asset.status !== 'available' && asset.status !== 'loaned')) {
-    asset.status = 'available'; // Standard-Wert
+  if (!asset.status || (asset.status !== 'available' && asset.status !== 'loaned' && asset.status !== 'defective')) {
+    asset.status = 'available';
   }
   if (asset.condition === undefined) {
     // Leer lassen
@@ -451,7 +451,7 @@ export async function validateCSVImport(
         imageUrl: result.asset.imageUrl || '', // Kein Standardbild - leer lassen wenn nicht vorhanden
         qrCode: result.asset.qrCode || '',
         currentUserId: null,
-        status: (result.asset.status === 'available' || result.asset.status === 'loaned') ? result.asset.status : 'available', // Status muss gültig sein
+        status: (result.asset.status === 'available' || result.asset.status === 'loaned' || result.asset.status === 'defective') ? result.asset.status : 'available',
         maintenanceIntervalMonths: result.asset.maintenanceIntervalMonths ?? 12, // Nur wenn undefined
         repairHistory: [],
         ...result.asset, // Überschreibt die obigen Werte wenn in result.asset vorhanden

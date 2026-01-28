@@ -21,7 +21,7 @@ export function exportAssetsToCSV(assets: Asset[]): void {
       'Kaufjahr': asset.purchaseYear?.toString() || '',
       'Garantie bis': asset.warrantyUntil ? formatDateDE(asset.warrantyUntil) : '',
       'Wartungsintervall (Monate)': asset.maintenanceIntervalMonths?.toString() || '',
-      'Status': asset.status === 'available' ? 'Verfügbar' : 'Ausgeliehen',
+      'Status': asset.status === 'available' ? 'Frei' : asset.status === 'loaned' ? 'Verliehen' : 'Defekt',
       'Letzte Wartung': asset.lastMaintenance ? formatDateDE(asset.lastMaintenance) : '',
       'Nächste Wartung': asset.nextMaintenance ? formatDateDE(asset.nextMaintenance) : '',
       'Nächster TÜV': asset.nextTuev ? formatDateDE(asset.nextTuev) : '',

@@ -24,10 +24,11 @@ const AdminStatsDashboard: React.FC<AdminStatsDashboardProps> = ({ assets, loans
     type
   })).filter(item => item.value > 0);
 
-  // Ausleihstatus-Verteilung
+  // Ausleihstatus-Verteilung: Frei blau, Verliehen gelb, Defekt rot
   const statusDistribution = [
-    { name: 'Verfügbar', value: assets.filter(a => a.status === 'available').length, color: COLORS.emerald },
-    { name: 'Verliehen', value: assets.filter(a => a.status === 'loaned').length, color: COLORS.blue },
+    { name: 'Frei', value: assets.filter(a => a.status === 'available').length, color: COLORS.blue },
+    { name: 'Verliehen', value: assets.filter(a => a.status === 'loaned').length, color: COLORS.amber },
+    { name: 'Defekt', value: assets.filter(a => a.status === 'defective').length, color: COLORS.rose },
   ];
 
   // Wartungsstatus

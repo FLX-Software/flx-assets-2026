@@ -22,7 +22,7 @@ type MaintenanceFilter = 'ALL' | 'OK' | 'WARNING' | 'CRITICAL';
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ assets, users, loans, onShowDetails, onAddAsset, onManageUsers, onManageOrganizations, onExport, onImport }) => {
   const [filterType, setFilterType] = useState<AssetType | 'ALL'>('ALL');
-  const [filterStatus, setFilterStatus] = useState<'available' | 'loaned' | 'ALL'>('ALL');
+  const [filterStatus, setFilterStatus] = useState<'available' | 'loaned' | 'defective' | 'ALL'>('ALL');
   const [filterCondition, setFilterCondition] = useState<number | 'ALL'>('ALL');
   const [filterMaintenance, setFilterMaintenance] = useState<MaintenanceFilter>('ALL');
   const [filterDateFrom, setFilterDateFrom] = useState<string>('');
@@ -105,8 +105,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ assets, users, loans, o
 
   const stats = {
     total: assets.length,
+    available: assets.filter(a => a.status === 'available').length,
     loaned: assets.filter(a => a.status === 'loaned').length,
-    available: assets.filter(a => a.status === 'available').length
+    defective: assets.filter(a => a.status === 'defective').length
   };
 
   return (
@@ -231,18 +232,22 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ assets, users, loans, o
       )}
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-3 gap-3 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
           <div className="bg-white dark:bg-[#0d1117] p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800">
             <p className="text-slate-500 dark:text-slate-400 text-[9px] font-black uppercase tracking-widest mb-1">Gesamt</p>
             <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">{stats.total}</p>
           </div>
           <div className="bg-blue-50/50 dark:bg-blue-900/10 p-4 rounded-xl shadow-sm border border-blue-100 dark:border-blue-900/30">
-            <p className="text-blue-600 dark:text-blue-400 text-[9px] font-black uppercase tracking-widest mb-1">Bereit</p>
+            <p className="text-blue-600 dark:text-blue-400 text-[9px] font-black uppercase tracking-widest mb-1">Frei</p>
             <p className="text-2xl sm:text-3xl font-black text-blue-700 dark:text-blue-500">{stats.available}</p>
           </div>
-          <div className="bg-slate-900 dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-800 dark:border-slate-700">
-            <p className="text-blue-400 text-[9px] font-black uppercase tracking-widest mb-1">Verliehen</p>
-            <p className="text-2xl sm:text-3xl font-black text-white">{stats.loaned}</p>
+          <div className="bg-amber-50/50 dark:bg-amber-900/10 p-4 rounded-xl shadow-sm border border-amber-100 dark:border-amber-900/30">
+            <p className="text-amber-600 dark:text-amber-400 text-[9px] font-black uppercase tracking-widest mb-1">Verliehen</p>
+            <p className="text-2xl sm:text-3xl font-black text-amber-700 dark:text-amber-500">{stats.loaned}</p>
+          </div>
+          <div className="bg-rose-50/50 dark:bg-rose-900/10 p-4 rounded-xl shadow-sm border border-rose-100 dark:border-rose-900/30">
+            <p className="text-rose-600 dark:text-rose-400 text-[9px] font-black uppercase tracking-widest mb-1">Defekt</p>
+            <p className="text-2xl sm:text-3xl font-black text-rose-700 dark:text-rose-500">{stats.defective}</p>
           </div>
         </div>
       </header>
@@ -288,8 +293,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ assets, users, loans, o
                 onChange={(e) => setFilterStatus(e.target.value as any)}
               >
                 <option value="ALL">Alle Status</option>
-                <option value="available">Verfügbar</option>
+                <option value="available">Frei</option>
                 <option value="loaned">Verliehen</option>
+                <option value="defective">Defekt</option>
               </select>
             </div>
             <div className="w-32">

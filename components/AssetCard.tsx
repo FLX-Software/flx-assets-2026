@@ -1,5 +1,5 @@
 import React from 'react';
-import { Asset, User, AssetTypeLabels } from '../types';
+import { Asset, User, AssetTypeLabels, AssetStatusLabels } from '../types';
 
 interface AssetCardProps {
   asset: Asset;
@@ -31,8 +31,12 @@ const AssetCard: React.FC<AssetCardProps> = ({ asset, assignedUser, onAction, ac
           </div>
           <div className="flex items-center gap-1.5 flex-shrink-0">
             <span className={`w-2 h-2 rounded-full ${conditionColor(asset.condition)}`} title={`Zustand: ${asset.condition}/5`} />
-            <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase ${asset.status === 'available' ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
-              {asset.status === 'available' ? 'Frei' : 'Verliehen'}
+            <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase ${
+              asset.status === 'available' ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300' :
+              asset.status === 'loaned' ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300' :
+              'bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-300'
+            }`}>
+              {AssetStatusLabels[asset.status] || asset.status}
             </span>
           </div>
         </div>

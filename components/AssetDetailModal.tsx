@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, lazy, Suspense } from 'react';
-import { Asset, AssetType, AssetTypeLabels, LoanRecord, RepairEntry, UserRole } from '../types';
+import { Asset, AssetType, AssetTypeLabels, AssetStatusLabels, LoanRecord, RepairEntry, UserRole } from '../types';
 import MaintenanceTimeline from './MaintenanceTimeline';
 import { createMaintenanceEvent, updateMaintenanceEvent, deleteMaintenanceEvent } from '../services/supabaseAssetService';
 
@@ -231,6 +231,15 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
                             <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Kategorie</label>
                             <select name="type" value={formData.type} onChange={handleChange} className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-bold outline-none dark:text-white">
                               {Object.values(AssetType).map(t => <option key={t} value={t}>{AssetTypeLabels[t]}</option>)}
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Status</label>
+                            <select name="status" value={formData.status} onChange={handleChange} className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-bold outline-none dark:text-white">
+                              {(['available', 'loaned', 'defective'] as const).map(s => (
+                                <option key={s} value={s}>{AssetStatusLabels[s]}</option>
+                              ))}
                             </select>
                           </div>
 
@@ -1198,8 +1207,14 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
 
         <div className="p-6 bg-slate-50 dark:bg-[#010409] border-t border-slate-100 dark:border-slate-800 flex justify-between items-center shrink-0">
           <div className="flex items-center gap-2">
-            <span className={`w-2.5 h-2.5 rounded-full ${formData.status === 'available' ? 'bg-emerald-500' : 'bg-rose-500 animate-pulse'}`}></span>
-            <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">{formData.status === 'available' ? 'Lager' : 'Einsatz'}</span>
+            <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${
+              formData.status === 'available' ? 'bg-blue-500' :
+              formData.status === 'loaned' ? 'bg-amber-500' : 'bg-rose-500'
+            } ${formData.status === 'loaned' ? 'animate-pulse' : ''}`}></span>
+            <span className={`text-[10px] font-black uppercase tracking-widest ${
+              formData.status === 'available' ? 'text-blue-600 dark:text-blue-400' :
+              formData.status === 'loaned' ? 'text-amber-600 dark:text-amber-400' : 'text-rose-600 dark:text-rose-400'
+            }`}>{AssetStatusLabels[formData.status] || formData.status}</span>
           </div>
           <div className="flex items-center gap-3">
             {editMode && activeTab === 'info' && (
