@@ -294,7 +294,15 @@ const App: React.FC = () => {
       showNotification('Asset-Daten wurden aktualisiert.', 'success');
     } catch (error: any) {
       console.error('Fehler beim Speichern:', error);
-      showNotification(error?.message || 'Fehler beim Speichern.', 'error');
+      // Hinweis bei Status-Constraint: DB erlaubt "Defekt" noch nicht
+      if (error?.code === '23514' && typeof error?.message === 'string' && error.message.includes('assets_status_check')) {
+        showNotification(
+          'Status "Defekt" wird von der Datenbank noch nicht erlaubt. Bitte die Datei add-status-defective-migration.sql im Supabase SQL Editor ausführen.',
+          'error'
+        );
+      } else {
+        showNotification(error?.message || 'Fehler beim Speichern.', 'error');
+      }
     }
   };
 

@@ -1,11 +1,15 @@
 -- ============================================================
 -- Migration: Status "defective" (Defekt) für Assets erlauben
 -- ============================================================
--- Nur nötig, wenn die Spalte "status" eine CHECK-Constraint hat.
--- In Supabase: SQL Editor → dieses Script ausführen.
+-- Fehler: new row violates check constraint "assets_status_check"
+--
+-- So führst du die Migration aus:
+-- 1. Supabase Dashboard öffnen → Projekt wählen
+-- 2. Links "SQL Editor" → "New query"
+-- 3. Dieses ganze Script einfügen und auf "Run" klicken
 -- ============================================================
 
--- Bestehende Constraint entfernen (Name ggf. anpassen)
+-- Bestehende Constraint entfernen
 ALTER TABLE public.assets DROP CONSTRAINT IF EXISTS assets_status_check;
 
 -- Neue Constraint: available | loaned | defective
