@@ -85,7 +85,7 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
   const handleImageUpload = async () => {
     if (!selectedFile || !isAdmin || isUploadingImage) return;
 
-    const UPLOAD_SAVE_TIMEOUT_MS = 40000; // Upload/Base64 + Save(bis 25s bei großem Bild)
+    const UPLOAD_SAVE_TIMEOUT_MS = 30000;
     const run = async () => {
       console.log('📤 Starte Bild-Upload...', { fileName: selectedFile!.name, size: selectedFile!.size, assetId: formData.id });
       const oldImageUrl = asset.imageUrl;
@@ -132,7 +132,6 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
       setImageUpdateKey((k) => k + 1);
     };
 
-    const UPLOAD_SAVE_TIMEOUT_MS = 30000;
     const timeoutPromise = new Promise<never>((_, reject) =>
       setTimeout(() => reject(new Error('Vorgang hat zu lange gedauert. Bitte erneut versuchen.')), UPLOAD_SAVE_TIMEOUT_MS)
     );
