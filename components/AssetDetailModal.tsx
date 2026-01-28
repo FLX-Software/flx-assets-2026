@@ -160,7 +160,7 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
         </div>
 
         {/* Tab Content – eine Scrollbar, fester Bereich */}
-        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 sm:p-6 md:p-8 custom-scrollbar">
+        <div className="flex-1 min-h-0 min-w-0 overflow-y-auto overflow-x-hidden p-4 sm:p-6 md:p-8 custom-scrollbar touch-pan-y">
           {isConfirmingDelete ? (
             <div className="h-full flex flex-col items-center justify-center py-12 text-center animate-in fade-in zoom-in-95 duration-200">
               <div className="w-20 h-20 bg-rose-50 dark:bg-rose-950 text-rose-500 rounded-full flex items-center justify-center mb-6">

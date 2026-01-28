@@ -40,6 +40,11 @@ body {
   min-height: 44px;
 }
 
+/* Nur vertikales Wischen in Modals/Scroll-Bereichen (Mobile) */
+.touch-pan-y {
+  touch-action: pan-y;
+}
+
 /* iOS: Kein Zoom bei Fokus, wenn font-size >= 16px */
 @media (max-width: 768px) {
   input:not([type="checkbox"]):not([type="radio"]),

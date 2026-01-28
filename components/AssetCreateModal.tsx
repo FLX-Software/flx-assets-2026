@@ -76,8 +76,8 @@ const AssetCreateModal: React.FC<AssetCreateModalProps> = ({ onClose, onSave, or
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/90 backdrop-blur-md">
-      <div className="bg-white dark:bg-[#0d1117] w-full max-w-5xl h-[100dvh] sm:h-auto sm:max-h-[90vh] rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl border border-blue-500/20 flex flex-col animate-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/90 backdrop-blur-md overflow-x-hidden">
+      <div className="bg-white dark:bg-[#0d1117] w-full max-w-5xl h-[100dvh] sm:h-auto sm:max-h-[90vh] rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl border border-blue-500/20 flex flex-col animate-in zoom-in-95 duration-200 min-w-0">
         <div className="p-4 sm:p-6 bg-slate-900 dark:bg-[#010409] flex justify-between items-center border-b border-blue-900/30 pt-[max(1rem,env(safe-area-inset-top))] sm:pt-6">
           <div>
             <span className="text-blue-500 font-black text-[10px] uppercase tracking-[0.3em] italic block mb-1">Inventur Management</span>
@@ -120,41 +120,41 @@ const AssetCreateModal: React.FC<AssetCreateModalProps> = ({ onClose, onSave, or
           </div>
         </div>
 
-        <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 md:p-8 custom-scrollbar">
-          <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="flex-1 min-h-0 min-w-0 overflow-y-auto overflow-x-hidden p-4 sm:p-6 md:p-8 custom-scrollbar touch-pan-y">
+          <form onSubmit={handleSubmit} className="space-y-6 min-w-0 max-w-full">
             {/* Tab: Basis */}
             {activeTab === 'basic' && (
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <div className="p-5 bg-blue-50/50 dark:bg-blue-900/10 rounded-2xl border border-blue-100 dark:border-blue-900/30">
+              <div className="space-y-6 min-w-0">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 min-w-0">
+                  <div className="space-y-4 min-w-0">
+                    <div className="p-5 bg-blue-50/50 dark:bg-blue-900/10 rounded-2xl border border-blue-100 dark:border-blue-900/30 min-w-0">
                       <label className="block text-[10px] font-black text-blue-400 uppercase tracking-widest mb-2">QR-CODE IDENTIFIER *</label>
-                      <input type="text" name="qrCode" value={formData.qrCode} onChange={handleChange} required className="w-full p-3 bg-white dark:bg-slate-900 border border-blue-200 rounded-xl text-xs font-black text-blue-600 uppercase italic outline-none" />
+                      <input type="text" name="qrCode" value={formData.qrCode} onChange={handleChange} required className="w-full min-w-0 p-3 bg-white dark:bg-slate-900 border border-blue-200 rounded-xl text-xs font-black text-blue-600 uppercase italic outline-none" />
                     </div>
                   </div>
 
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Marke *</label>
-                        <input type="text" name="brand" value={formData.brand} onChange={handleChange} required className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-bold outline-none dark:text-white" />
+                  <div className="space-y-4 min-w-0">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 min-w-0">
+<div className="min-w-0">
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Marke *</label>
+                        <input type="text" name="brand" value={formData.brand} onChange={handleChange} required className="w-full min-w-0 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-bold outline-none dark:text-white" />
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Modell *</label>
-                        <input type="text" name="model" value={formData.model} onChange={handleChange} required className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-bold outline-none dark:text-white" />
+                        <input type="text" name="model" value={formData.model} onChange={handleChange} required className="w-full min-w-0 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-bold outline-none dark:text-white" />
                       </div>
                     </div>
 
-                    <div>
+                    <div className="min-w-0">
                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Kategorie</label>
-                      <select name="type" value={formData.type} onChange={handleChange} className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-bold outline-none dark:text-white">
+                      <select name="type" value={formData.type} onChange={handleChange} className="w-full min-w-0 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-bold outline-none dark:text-white">
                         {Object.values(AssetType).map(t => <option key={t} value={t}>{AssetTypeLabels[t]}</option>)}
                       </select>
                     </div>
 
-                    <div>
+                    <div className="min-w-0">
                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Status</label>
-                      <select name="status" value={formData.status || 'available'} onChange={handleChange} className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-bold outline-none dark:text-white">
+                      <select name="status" value={formData.status || 'available'} onChange={handleChange} className="w-full min-w-0 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-bold outline-none dark:text-white">
                         {(['available', 'loaned', 'defective'] as AssetStatus[]).map(s => (
                           <option key={s} value={s}>{AssetStatusLabels[s]}</option>
                         ))}
@@ -162,36 +162,36 @@ const AssetCreateModal: React.FC<AssetCreateModalProps> = ({ onClose, onSave, or
                     </div>
 
                     {formData.type === AssetType.VEHICLE && (
-                      <div className="animate-in slide-in-from-left-2 duration-300">
+                      <div className="animate-in slide-in-from-left-2 duration-300 min-w-0">
                         <label className="block text-[10px] font-black text-blue-500 uppercase tracking-widest mb-1">Kennzeichen</label>
-                        <input type="text" name="licensePlate" value={formData.licensePlate || ''} onChange={handleChange} className="w-full p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-900 rounded-xl text-sm font-black italic tracking-tighter outline-none dark:text-white uppercase" placeholder="Z.B. B-FLX 101" />
+                        <input type="text" name="licensePlate" value={formData.licensePlate || ''} onChange={handleChange} className="w-full min-w-0 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-900 rounded-xl text-sm font-black italic tracking-tighter outline-none dark:text-white uppercase" placeholder="Z.B. B-FLX 101" />
                       </div>
                     )}
 
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 min-w-0">
+                      <div className="min-w-0">
                         <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Wartungsintervall</label>
-                        <select name="maintenanceIntervalMonths" value={formData.maintenanceIntervalMonths} onChange={handleChange} className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-bold outline-none dark:text-white">
+                        <select name="maintenanceIntervalMonths" value={formData.maintenanceIntervalMonths} onChange={handleChange} className="w-full min-w-0 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-bold outline-none dark:text-white">
                           <option value={3}>3 Monate</option>
                           <option value={6}>6 Monate</option>
                           <option value={12}>12 Monate</option>
                           <option value={24}>24 Monate</option>
                         </select>
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Zustand (1-5)</label>
-                        <input type="number" min="1" max="5" name="condition" value={formData.condition} onChange={handleChange} className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-bold outline-none dark:text-white" />
+                        <input type="number" min="1" max="5" name="condition" value={formData.condition} onChange={handleChange} className="w-full min-w-0 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-bold outline-none dark:text-white" />
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 min-w-0">
+                      <div className="min-w-0">
                         <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Kaufjahr</label>
-                        <input type="number" name="purchaseYear" value={formData.purchaseYear} onChange={handleChange} className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-bold outline-none dark:text-white" />
+                        <input type="number" name="purchaseYear" value={formData.purchaseYear} onChange={handleChange} className="w-full min-w-0 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-bold outline-none dark:text-white" />
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Garantie bis</label>
-                        <input type="date" name="warrantyUntil" value={formData.warrantyUntil} onChange={handleChange} className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-bold outline-none dark:text-white" />
+                        <input type="date" name="warrantyUntil" value={formData.warrantyUntil} onChange={handleChange} className="w-full min-w-0 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-bold outline-none dark:text-white" />
                       </div>
                     </div>
                   </div>
@@ -201,53 +201,53 @@ const AssetCreateModal: React.FC<AssetCreateModalProps> = ({ onClose, onSave, or
 
             {/* Tab: Allgemein */}
             {activeTab === 'general' && (
-              <div className="space-y-6">
-                <div>
+              <div className="space-y-6 min-w-0">
+                <div className="min-w-0">
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Beschreibung</label>
-                  <textarea name="description" value={formData.description || ''} onChange={handleChange} rows={3} className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-medium outline-none dark:text-white" placeholder="Zusätzliche Informationen zum Asset..." />
+                  <textarea name="description" value={formData.description || ''} onChange={handleChange} rows={3} className="w-full min-w-0 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-medium outline-none dark:text-white box-border" placeholder="Zusätzliche Informationen zum Asset..." />
                 </div>
 
-                <div>
+                <div className="min-w-0">
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Notizen</label>
-                  <textarea name="notes" value={formData.notes || ''} onChange={handleChange} rows={2} className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-medium outline-none dark:text-white" placeholder="Interne Notizen..." />
+                  <textarea name="notes" value={formData.notes || ''} onChange={handleChange} rows={2} className="w-full min-w-0 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-medium outline-none dark:text-white box-border" placeholder="Interne Notizen..." />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 min-w-0">
+                  <div className="min-w-0">
                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Standort</label>
-                    <input type="text" name="location" value={formData.location || ''} onChange={handleChange} className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-bold outline-none dark:text-white" placeholder="z.B. Lager 1, Werkstatt" />
+                    <input type="text" name="location" value={formData.location || ''} onChange={handleChange} className="w-full min-w-0 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-bold outline-none dark:text-white" placeholder="z.B. Lager 1, Werkstatt" />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Abteilung</label>
-                    <input type="text" name="department" value={formData.department || ''} onChange={handleChange} className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-bold outline-none dark:text-white" placeholder="z.B. Produktion, Verwaltung" />
+                    <input type="text" name="department" value={formData.department || ''} onChange={handleChange} className="w-full min-w-0 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-bold outline-none dark:text-white" placeholder="z.B. Produktion, Verwaltung" />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 min-w-0">
+                  <div className="min-w-0">
                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Kostenstelle</label>
-                    <input type="text" name="costCenter" value={formData.costCenter || ''} onChange={handleChange} className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-bold outline-none dark:text-white" />
+                    <input type="text" name="costCenter" value={formData.costCenter || ''} onChange={handleChange} className="w-full min-w-0 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-bold outline-none dark:text-white" />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Anschaffungsdatum</label>
-                    <input type="date" name="purchaseDate" value={formData.purchaseDate || ''} onChange={handleChange} className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-bold outline-none dark:text-white" />
+                    <input type="date" name="purchaseDate" value={formData.purchaseDate || ''} onChange={handleChange} className="w-full min-w-0 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-bold outline-none dark:text-white" />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 min-w-0">
+                  <div className="min-w-0">
                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Lieferant</label>
-                    <input type="text" name="supplier" value={formData.supplier || ''} onChange={handleChange} className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-bold outline-none dark:text-white" />
+                    <input type="text" name="supplier" value={formData.supplier || ''} onChange={handleChange} className="w-full min-w-0 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-bold outline-none dark:text-white" />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Rechnungsnummer</label>
-                    <input type="text" name="invoiceNumber" value={formData.invoiceNumber || ''} onChange={handleChange} className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-bold outline-none dark:text-white" />
+                    <input type="text" name="invoiceNumber" value={formData.invoiceNumber || ''} onChange={handleChange} className="w-full min-w-0 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-bold outline-none dark:text-white" />
                   </div>
                 </div>
 
-                <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800">
+                <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 min-w-0 overflow-hidden">
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Dokumente vorhanden</label>
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 min-w-0">
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input type="checkbox" name="hasInvoice" checked={formData.hasInvoice || false} onChange={handleChange} className="w-4 h-4 rounded border-slate-300" />
                       <span className="text-sm font-bold">Rechnung</span>
