@@ -79,10 +79,10 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
-      <div className="bg-white dark:bg-[#0d1117] w-full max-w-5xl h-[85vh] rounded-3xl overflow-hidden shadow-2xl border border-blue-500/20 flex flex-col shrink-0 animate-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/90 backdrop-blur-md">
+      <div className="bg-white dark:bg-[#0d1117] w-full max-w-5xl max-h-[100dvh] sm:max-h-[85vh] h-[100dvh] sm:h-[85vh] rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl border border-blue-500/20 flex flex-col shrink-0 animate-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="p-6 bg-slate-900 dark:bg-[#010409] flex justify-between items-center border-b border-blue-900/30">
+        <div className="p-4 sm:p-6 bg-slate-900 dark:bg-[#010409] flex justify-between items-center border-b border-blue-900/30 pt-[max(1rem,env(safe-area-inset-top))] sm:pt-6">
           <div>
             <span className="text-blue-500 font-black text-[10px] uppercase tracking-[0.3em] italic block mb-1">Asset Intelligence</span>
             <h2 className="text-2xl font-black text-white uppercase italic tracking-tighter leading-none">
@@ -91,13 +91,13 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
               )}
             </h2>
           </div>
-          <button onClick={onClose} className="bg-white/10 p-2 rounded-xl text-white hover:bg-white/20 transition-colors">
+          <button onClick={onClose} className="min-touch flex items-center justify-center bg-white/10 p-2 rounded-xl text-white hover:bg-white/20 transition-colors" aria-label="Schließen">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
         </div>
 
         {/* Tabs */}
-        <div className="px-6 pt-4 border-b border-slate-200 dark:border-slate-800">
+        <div className="px-4 sm:px-6 pt-4 border-b border-slate-200 dark:border-slate-800 shrink-0">
           <div className="flex gap-2 overflow-x-auto custom-scrollbar">
             <button 
               onClick={() => { setActiveTab('info'); setIsConfirmingDelete(false); }}
@@ -147,7 +147,7 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
         </div>
 
         {/* Tab Content – eine Scrollbar, fester Bereich */}
-        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-8 custom-scrollbar">
+        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 sm:p-6 md:p-8 custom-scrollbar">
           {isConfirmingDelete ? (
             <div className="h-full flex flex-col items-center justify-center py-12 text-center animate-in fade-in zoom-in-95 duration-200">
               <div className="w-20 h-20 bg-rose-50 dark:bg-rose-950 text-rose-500 rounded-full flex items-center justify-center mb-6">
@@ -1188,7 +1188,7 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
           )}
         </div>
 
-        <div className="p-6 bg-slate-50 dark:bg-[#010409] border-t border-slate-100 dark:border-slate-800 flex justify-between items-center shrink-0">
+        <div className="p-4 sm:p-6 bg-slate-50 dark:bg-[#010409] border-t border-slate-100 dark:border-slate-800 flex justify-between items-center shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))] sm:pb-6">
           <div className="flex items-center gap-2">
             <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${
               formData.status === 'available' ? 'bg-blue-500' :

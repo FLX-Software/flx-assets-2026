@@ -17,6 +17,14 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 console.log('✅ Creating Supabase client...');
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
-export { supabaseUrl, supabaseAnonKey };
+
+// cache: 'no-store' verhindert, dass Browser/SW alte API-Antworten liefern
+// („zweite Aktion funktioniert nicht“-Bug nach erstem Aufruf)
+const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  global: {
+    fetch: (url, init) => fetch(url, { ...init, cache: 'no-store' }),
+  },
+});
+
+export { supabase, supabaseUrl, supabaseAnonKey };
 console.log('✅ Supabase client created successfully');

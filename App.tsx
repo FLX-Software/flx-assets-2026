@@ -315,7 +315,8 @@ const App: React.FC = () => {
       showNotification(`Neues Asset "${newAsset.brand} ${newAsset.model}" wurde angelegt.`, 'success');
     } catch (error: any) {
       console.error('❌ Fehler beim Erstellen:', error);
-      showNotification(error.message || 'Fehler beim Erstellen.', 'error');
+      const msg = error?.message ?? error?.error_description ?? (typeof error === 'string' ? error : 'Fehler beim Erstellen.');
+      showNotification(msg, 'error');
     }
   };
 
@@ -398,7 +399,7 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen pb-12 bg-slate-50 dark:bg-[#010409] text-slate-900 dark:text-slate-100 transition-colors duration-300">
       {/* Navigation / Header */}
-      <nav className="bg-[#010409] text-white p-4 sticky top-0 z-30 shadow-2xl border-b border-blue-900/30">
+      <nav className="bg-[#010409] text-white pt-[max(1rem,env(safe-area-inset-top))] px-4 pb-4 sticky top-0 z-30 shadow-2xl border-b border-blue-900/30">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="flex flex-col">
             <div className="flex items-baseline gap-2 flex-wrap">
@@ -417,8 +418,9 @@ const App: React.FC = () => {
           <div className="flex items-center gap-2 sm:gap-4">
             <button 
               onClick={() => setIsDarkMode(!isDarkMode)}
-              className="p-2.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
+              className="min-touch flex items-center justify-center p-2.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
               title={isDarkMode ? "Light Mode" : "Dark Mode"}
+              aria-label={isDarkMode ? "Hellmodus" : "Dunkelmodus"}
             >
               {isDarkMode ? (
                 <svg className="w-5 h-5 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
@@ -434,7 +436,7 @@ const App: React.FC = () => {
             <button 
               onClick={() => setIsScannerOpen(true)}
               disabled={isLoading}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-600 text-white px-3 py-2 rounded-xl border border-blue-400/30 shadow-lg shadow-blue-600/20 transition-all active:scale-95 group disabled:cursor-not-allowed"
+              className="min-touch flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-600 text-white px-3 py-2 rounded-xl border border-blue-400/30 shadow-lg shadow-blue-600/20 transition-all active:scale-95 group disabled:cursor-not-allowed"
             >
               <svg className="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
@@ -449,7 +451,7 @@ const App: React.FC = () => {
               <div className="relative org-dropdown-container">
                 <button
                   onClick={() => setIsOrgDropdownOpen(!isOrgDropdownOpen)}
-                  className="flex items-center gap-2 px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all text-sm font-bold"
+                  className="min-touch flex items-center gap-2 px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all text-sm font-bold"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
@@ -504,8 +506,9 @@ const App: React.FC = () => {
               <button 
                 onClick={handleLogout}
                 disabled={isLoading}
-                className="p-2.5 bg-rose-600/20 hover:bg-rose-600 text-rose-500 hover:text-white rounded-xl transition-all disabled:opacity-50"
+                className="min-touch flex items-center justify-center p-2.5 bg-rose-600/20 hover:bg-rose-600 text-rose-500 hover:text-white rounded-xl transition-all disabled:opacity-50"
                 title="Abmelden"
+                aria-label="Abmelden"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
               </button>
@@ -525,7 +528,10 @@ const App: React.FC = () => {
         )}
 
         {notification && (
-          <div className={`fixed top-24 right-4 left-4 z-[100] p-4 rounded-xl shadow-2xl shadow-blue-500/20 transform transition-all border animate-in slide-in-from-top duration-300 ${notification.type === 'success' ? 'bg-emerald-600 border-emerald-400 text-white' : 'bg-rose-600 border-rose-400 text-white'}`}>
+          <div 
+            className={`fixed right-4 left-4 z-[100] p-4 rounded-xl shadow-2xl shadow-blue-500/20 transform transition-all border animate-in slide-in-from-top duration-300 ${notification.type === 'success' ? 'bg-emerald-600 border-emerald-400 text-white' : 'bg-rose-600 border-rose-400 text-white'}`}
+            style={{ top: 'calc(6rem + env(safe-area-inset-top, 0px))' }}
+          >
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-3 font-bold flex-1">
                 {notification.type === 'success' ? (
@@ -537,7 +543,7 @@ const App: React.FC = () => {
               </div>
               <button
                 onClick={() => setNotification(null)}
-                className="flex-shrink-0 p-1 rounded-lg hover:bg-white/20 transition-colors focus:outline-none focus:ring-2 focus:ring-white/50"
+                className="min-touch flex-shrink-0 flex items-center justify-center p-1 rounded-lg hover:bg-white/20 transition-colors focus:outline-none focus:ring-2 focus:ring-white/50"
                 aria-label="Benachrichtigung schließen"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

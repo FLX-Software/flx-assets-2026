@@ -1,5 +1,4 @@
-
-const CACHE_NAME = 'flx-assets-v1';
+const CACHE_NAME = 'flx-assets-v2';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -13,21 +12,33 @@ const NO_CACHE_PATTERNS = [
   /\/assets\/.*\.css$/,
 ];
 
-self.addEventListener('install', (event) => {
+// API / Daten-Requests: niemals cachen, immer cache: 'no-store'
+// Verhindert "zweiter Aufruf funktioniert nicht"-Bug durch Stale-Responses
+const API_OR_DATA_PATTERNS = [
+  /supabase\.co/i,
+  /\/rest\/v1\//i,
+  /\/auth\/v1\//i,
+  /\/realtime\//i,
+];
+
+function isApiOrDataRequest(url) {
+  return API_OR_DATA_PATTERNS.some(function(p) { return p.test(url); });
+}
+
+self.addEventListener('install', function(event) {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
+    caches.open(CACHE_NAME).then(function(cache) {
       return cache.addAll(ASSETS_TO_CACHE);
     })
   );
-  // Skip waiting, damit der neue Service Worker sofort aktiv wird
   self.skipWaiting();
 });
 
-self.addEventListener('activate', (event) => {
+self.addEventListener('activate', function(event) {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
+    caches.keys().then(function(cacheNames) {
       return Promise.all(
-        cacheNames.map((cacheName) => {
+        cacheNames.map(function(cacheName) {
           if (cacheName !== CACHE_NAME) {
             return caches.delete(cacheName);
           }
@@ -35,42 +46,45 @@ self.addEventListener('activate', (event) => {
       );
     })
   );
-  // Claim clients, damit der neue Service Worker sofort Kontrolle übernimmt
   return self.clients.claim();
 });
 
-self.addEventListener('fetch', (event) => {
-  const url = new URL(event.request.url);
-  
-  // Prüfe ob die Anfrage gecacht werden soll
-  const shouldCache = !NO_CACHE_PATTERNS.some(pattern => pattern.test(url.pathname));
-  
-  // Für Assets die nicht gecacht werden sollen: Network-First (immer frisch laden)
+self.addEventListener('fetch', function(event) {
+  var url = event.request.url;
+
+  // API / Supabase: nie cachen, immer frisch vom Netz (cache: 'no-store')
+  if (isApiOrDataRequest(url) || event.request.method !== 'GET') {
+    event.respondWith(
+      fetch(event.request, { cache: 'no-store' })
+    );
+    return;
+  }
+
+  var urlObj = new URL(url);
+  var shouldCache = !NO_CACHE_PATTERNS.some(function(p) { return p.test(urlObj.pathname); });
+
   if (!shouldCache) {
     event.respondWith(
-      fetch(event.request).catch(() => {
-        // Bei Fehler: Versuche aus Cache (Fallback)
+      fetch(event.request, { cache: 'no-store' }).catch(function() {
         return caches.match(event.request);
       })
     );
     return;
   }
-  
-  // Für andere Anfragen: Network-First Strategie (immer versuchen zu fetchen, dann Cache)
+
+  // Nur statische Same-Origin-Seiten: Network-First, bei Erfolg cachen
   event.respondWith(
-    fetch(event.request)
-      .then((response) => {
-        // Nur GET-Requests und erfolgreiche Responses cachen
-        if (event.request.method === 'GET' && response.status === 200) {
-          const responseToCache = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
+    fetch(event.request, { cache: 'no-store' })
+      .then(function(response) {
+        if (event.request.method === 'GET' && response.status === 200 && response.type === 'basic') {
+          var responseToCache = response.clone();
+          caches.open(CACHE_NAME).then(function(cache) {
             cache.put(event.request, responseToCache);
           });
         }
         return response;
       })
-      .catch(() => {
-        // Bei Netzwerkfehler: Versuche aus Cache
+      .catch(function() {
         return caches.match(event.request);
       })
   );

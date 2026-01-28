@@ -97,10 +97,10 @@ export async function generateUniqueQRCode(baseQRCode?: string): Promise<string>
  * Erstellt ein neues Asset
  */
 export async function createAsset(asset: Asset, organizationId: string): Promise<Asset> {
-  console.log('💾 createAsset gestartet', { assetId: asset.id, brand: asset.brand, organizationId });
-  
+  console.log('💾 createAsset gestartet', { brand: asset.brand, organizationId });
+
   const dbAsset = assetToDBAsset(asset, organizationId);
-  console.log('💾 DB-Asset vorbereitet', { id: dbAsset.id, image_url: dbAsset.image_url });
+  console.log('💾 DB-Asset vorbereitet', { brand: dbAsset.brand });
 
   const { data, error } = await supabase
     .from('assets')
@@ -108,9 +108,14 @@ export async function createAsset(asset: Asset, organizationId: string): Promise
     .select()
     .single();
 
-  if (error || !data) {
+  if (error) {
+    const msg = error?.message ?? error?.code ?? 'Asset konnte nicht erstellt werden';
     console.error('❌ Fehler beim Erstellen des Assets:', error);
-    throw error || new Error('Asset konnte nicht erstellt werden');
+    throw new Error(typeof msg === 'string' ? msg : 'Asset konnte nicht erstellt werden');
+  }
+  if (!data) {
+    console.error('❌ Erstellen: keine Daten zurück');
+    throw new Error('Asset konnte nicht erstellt werden (keine Antwort).');
   }
 
   console.log('✅ Asset erfolgreich erstellt', { id: data.id });

@@ -4,8 +4,31 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Safe-Area-Variablen für Notch/Home-Indicator */
+:root {
+  --sat: env(safe-area-inset-top);
+  --sar: env(safe-area-inset-right);
+  --sab: env(safe-area-inset-bottom);
+  --sal: env(safe-area-inset-left);
+}
+
 body {
   font-family: 'Inter', sans-serif;
+}
+
+/* Mindest-Touchfläche 44×44px (WCAG/Apple) */
+.min-touch {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+/* iOS: Kein Zoom bei Fokus, wenn font-size >= 16px */
+@media (max-width: 768px) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
 }
 
 /* Custom styles for html5-qrcode to support dark mode */

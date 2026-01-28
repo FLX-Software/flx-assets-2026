@@ -26,6 +26,7 @@ const AssetCreateModal: React.FC<AssetCreateModalProps> = ({ onClose, onSave, or
   });
 
   const [activeTab, setActiveTab] = useState<TabType>('basic');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
@@ -46,17 +47,22 @@ const AssetCreateModal: React.FC<AssetCreateModalProps> = ({ onClose, onSave, or
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
     if (!formData.brand || !formData.model || !formData.qrCode) {
       alert("Pflichtfelder fehlen!");
       return;
     }
+    setIsSubmitting(true);
     try {
       const assetId = `a-${Date.now()}`;
       const newAsset: Asset = { ...formData as Asset, id: assetId, imageUrl: '' };
       await onSave(newAsset);
     } catch (error: any) {
       console.error('❌ Fehler beim Speichern:', error);
-      alert(error?.message || 'Fehler beim Speichern.');
+      const msg = error?.message ?? error?.error_description ?? (typeof error === 'string' ? error : 'Fehler beim Speichern.');
+      alert(msg);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -70,20 +76,20 @@ const AssetCreateModal: React.FC<AssetCreateModalProps> = ({ onClose, onSave, or
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
-      <div className="bg-white dark:bg-[#0d1117] w-full max-w-5xl rounded-3xl overflow-hidden shadow-2xl border border-blue-500/20 flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
-        <div className="p-6 bg-slate-900 dark:bg-[#010409] flex justify-between items-center border-b border-blue-900/30">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/90 backdrop-blur-md">
+      <div className="bg-white dark:bg-[#0d1117] w-full max-w-5xl h-[100dvh] sm:h-auto sm:max-h-[90vh] rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl border border-blue-500/20 flex flex-col animate-in zoom-in-95 duration-200">
+        <div className="p-4 sm:p-6 bg-slate-900 dark:bg-[#010409] flex justify-between items-center border-b border-blue-900/30 pt-[max(1rem,env(safe-area-inset-top))] sm:pt-6">
           <div>
             <span className="text-blue-500 font-black text-[10px] uppercase tracking-[0.3em] italic block mb-1">Inventur Management</span>
-            <h2 className="text-2xl font-black text-white uppercase italic tracking-tighter leading-none">Neues Asset <span className="text-blue-500">registrieren</span></h2>
+            <h2 className="text-xl sm:text-2xl font-black text-white uppercase italic tracking-tighter leading-none">Neues Asset <span className="text-blue-500">registrieren</span></h2>
           </div>
-          <button onClick={onClose} className="bg-white/10 p-2 rounded-xl text-white hover:bg-white/20 transition-colors">
+          <button onClick={onClose} className="min-touch flex items-center justify-center bg-white/10 p-2 rounded-xl text-white hover:bg-white/20 transition-colors" aria-label="Schließen">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
         </div>
 
         {/* Tabs */}
-        <div className="px-6 pt-4 border-b border-slate-200 dark:border-slate-800">
+        <div className="px-4 sm:px-6 pt-4 border-b border-slate-200 dark:border-slate-800 shrink-0">
           <div className="flex gap-2 overflow-x-auto custom-scrollbar">
             {tabs.map(tab => {
               const isActive = activeTab === tab.id;
@@ -114,7 +120,7 @@ const AssetCreateModal: React.FC<AssetCreateModalProps> = ({ onClose, onSave, or
           </div>
         </div>
 
-        <div className="overflow-y-auto p-8 flex-grow custom-scrollbar">
+        <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 md:p-8 custom-scrollbar">
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Tab: Basis */}
             {activeTab === 'basic' && (
@@ -558,10 +564,17 @@ const AssetCreateModal: React.FC<AssetCreateModalProps> = ({ onClose, onSave, or
               </div>
             )}
 
-            <div className="flex gap-4 mt-6 pt-6 border-t border-slate-100 dark:border-slate-800">
-              <button type="button" onClick={onClose} className="flex-1 py-4 bg-slate-100 dark:bg-slate-800 text-slate-500 font-black rounded-2xl uppercase text-xs tracking-widest italic">Abbrechen</button>
-              <button type="submit" className="flex-[2] py-4 bg-blue-600 text-white font-black rounded-2xl uppercase text-xs tracking-widest italic shadow-xl shadow-blue-600/30 flex items-center justify-center gap-2">
-                Asset registrieren
+            <div className="flex gap-4 mt-6 pt-6 pb-[max(1rem,env(safe-area-inset-bottom))] sm:pb-0 border-t border-slate-100 dark:border-slate-800">
+              <button type="button" onClick={onClose} disabled={isSubmitting} className="flex-1 py-4 bg-slate-100 dark:bg-slate-800 text-slate-500 font-black rounded-2xl uppercase text-xs tracking-widest italic disabled:opacity-50">Abbrechen</button>
+              <button type="submit" disabled={isSubmitting} className="flex-[2] py-4 bg-blue-600 text-white font-black rounded-2xl uppercase text-xs tracking-widest italic shadow-xl shadow-blue-600/30 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                {isSubmitting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Wird gespeichert…
+                  </>
+                ) : (
+                  'Asset registrieren'
+                )}
               </button>
             </div>
           </form>
