@@ -40,7 +40,7 @@ const AssetCard: React.FC<AssetCardProps> = ({ asset, assignedUser, onAction, ac
         <div className="flex flex-wrap gap-x-3 gap-y-1 text-[10px] font-bold text-slate-500 dark:text-slate-400 mt-auto pt-2 border-t border-slate-100 dark:border-slate-800">
           <span className="uppercase tracking-wider">{AssetTypeLabels[asset.type]}</span>
           <span>Garantie: {asset.warrantyUntil || '–'}</span>
-          {assignedUser && <span className="text-blue-600 dark:text-blue-400">{assignedUser.name.split(' ')[0]}</span>}
+          {assignedUser && <span className="text-amber-600 dark:text-amber-400">{assignedUser.name.split(' ')[0]}</span>}
         </div>
       </div>
 
