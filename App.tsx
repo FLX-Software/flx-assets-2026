@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { User, UserRole, Asset, LoanRecord, Organization } from './types';
 import AdminDashboard from './components/AdminDashboard';
 import StaffDashboard from './components/StaffDashboard';
@@ -36,6 +36,8 @@ const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [availableOrganizations, setAvailableOrganizations] = useState<Organization[]>([]);
   const [isOrgDropdownOpen, setIsOrgDropdownOpen] = useState(false);
+  const [switchingToOrgId, setSwitchingToOrgId] = useState<string | null>(null);
+  const switchRequestIdRef = useRef(0);
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const saved = localStorage.getItem('flx_theme');
     if (saved) return saved === 'dark';
@@ -111,15 +113,16 @@ const App: React.FC = () => {
     };
   }, []);
 
-  // Daten laden (Assets, Loans, Users)
-  const loadData = async (user: User) => {
+  // Daten laden (Assets, Loans, Users). skipLoading=true z.B. beim Firmenwechsel (Aufrufer steuert Ladezustand).
+  const loadData = async (user: User, options?: { skipLoading?: boolean }) => {
     if (!user.organizationId) {
       showNotification('Keine Organisation zugeordnet.', 'error');
       return;
     }
+    const skipLoading = options?.skipLoading === true;
 
     try {
-      setIsLoading(true);
+      if (!skipLoading) setIsLoading(true);
       const [assetsData, loansData, membersData] = await Promise.all([
         fetchAssets(user.organizationId),
         fetchLoans(user.organizationId),
@@ -133,7 +136,7 @@ const App: React.FC = () => {
       console.error('Fehler beim Laden der Daten:', error);
       showNotification('Fehler beim Laden der Daten.', 'error');
     } finally {
-      setIsLoading(false);
+      if (!skipLoading) setIsLoading(false);
     }
   };
 
@@ -156,55 +159,57 @@ const App: React.FC = () => {
 
   const handleSwitchOrganization = async (orgId: string) => {
     if (!currentUser) return;
-    
-    // Verhindere mehrfache gleichzeitige Wechsel
-    if (isLoading) {
-      console.warn('⚠️ Organisation-Wechsel bereits in Bearbeitung, ignoriere...');
+    if (currentUser.organizationId === orgId) {
+      setIsOrgDropdownOpen(false);
       return;
     }
-    
+
+    const myRequestId = ++switchRequestIdRef.current;
+    setIsLoading(true);
+    setSwitchingToOrgId(orgId);
+    console.log('🔄 Starte Organisation-Wechsel zu:', orgId);
+
     try {
-      setIsLoading(true);
-      console.log('🔄 Starte Organisation-Wechsel zu:', orgId);
-      
-      // Timeout für gesamten Wechsel-Prozess (30 Sekunden)
+      // Timeout für gesamten Wechsel-Prozess (15 Sekunden – danach abbrechen statt ewig warten)
+      const timeoutMs = 15000;
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Organisation-Wechsel Timeout (15s)')), timeoutMs)
+      );
+
       const switchPromise = (async () => {
         const user = await loadUserWithOrganizations(currentUser.id, orgId);
-        if (!user) {
-          throw new Error('User konnte nicht geladen werden');
-        }
-        
+        if (!user) throw new Error('User konnte nicht geladen werden');
+
+        if (myRequestId !== switchRequestIdRef.current) return user;
+
         setCurrentUser(user);
-        console.log('✅ User geladen, lade Daten...');
-        
-        // Lade Daten parallel für bessere Performance
         await Promise.all([
-          loadData(user),
-          loadAvailableOrganizations(user)
+          loadData(user, { skipLoading: true }),
+          loadAvailableOrganizations(user),
         ]);
-        
-        console.log('✅ Organisation-Wechsel abgeschlossen');
         return user;
       })();
-      
-      const timeoutPromise = new Promise<User>((_, reject) => 
-        setTimeout(() => reject(new Error('Organisation-Wechsel Timeout (30s)')), 30000)
-      );
-      
+
       const user = await Promise.race([switchPromise, timeoutPromise]);
-      
+
+      if (myRequestId !== switchRequestIdRef.current) return;
+
       setIsOrgDropdownOpen(false);
       showNotification(`Zu ${user.organizationName} gewechselt`, 'success');
     } catch (error: any) {
+      if (myRequestId !== switchRequestIdRef.current) return;
       console.error('❌ Fehler beim Wechseln der Organisation:', error);
       showNotification(
-        error.message?.includes('Timeout') 
-          ? 'Organisation-Wechsel hat zu lange gedauert. Bitte versuchen Sie es erneut.' 
-          : 'Fehler beim Wechseln der Organisation', 
+        error.message?.includes('Timeout')
+          ? 'Organisation-Wechsel hat zu lange gedauert. Bitte erneut versuchen.'
+          : 'Fehler beim Wechseln der Organisation',
         'error'
       );
     } finally {
-      setIsLoading(false);
+      if (myRequestId === switchRequestIdRef.current) {
+        setIsLoading(false);
+        setSwitchingToOrgId(null);
+      }
     }
   };
 
@@ -481,15 +486,24 @@ const App: React.FC = () => {
                 {isOrgDropdownOpen && (
                   <div className="absolute right-0 mt-2 w-64 bg-[#0d1117] border border-blue-500/20 rounded-xl shadow-2xl z-50 overflow-hidden">
                     <div className="p-2">
+                      {switchingToOrgId && (
+                        <div className="flex items-center gap-2 px-4 py-2 mb-2 rounded-lg bg-blue-600/20 border border-blue-500/30">
+                          <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin shrink-0" />
+                          <p className="text-xs font-bold text-blue-200 truncate">
+                            Wechsle zu {availableOrganizations.find(o => o.id === switchingToOrgId)?.name ?? '…'}
+                          </p>
+                        </div>
+                      )}
                       {availableOrganizations.map(org => (
                         <button
                           key={org.id}
                           onClick={() => handleSwitchOrganization(org.id)}
+                          disabled={!!switchingToOrgId}
                           className={`w-full text-left px-4 py-3 rounded-lg transition-all ${
                             org.id === currentUser.organizationId
                               ? 'bg-blue-600 text-white'
                               : 'hover:bg-white/10 text-white'
-                          }`}
+                          } disabled:opacity-60 disabled:cursor-wait disabled:hover:bg-transparent`}
                         >
                           <p className="font-black text-sm uppercase italic">{org.name}</p>
                           {org.id === currentUser.organizationId && (
