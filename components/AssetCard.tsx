@@ -10,11 +10,7 @@ interface AssetCardProps {
 }
 
 const AssetCard: React.FC<AssetCardProps> = ({ asset, assignedUser, onAction, actionLabel, onDetails }) => {
-  const conditionColor = (c: number) => {
-    if (c >= 4) return 'bg-blue-500';
-    if (c >= 2) return 'bg-slate-400';
-    return 'bg-rose-500';
-  };
+  const statusDotColor = asset.status === 'available' ? 'bg-blue-500' : asset.status === 'loaned' ? 'bg-amber-500' : 'bg-rose-500';
 
   return (
     <div
@@ -30,7 +26,7 @@ const AssetCard: React.FC<AssetCardProps> = ({ asset, assignedUser, onAction, ac
             <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 mt-0.5 truncate">{asset.qrCode}</p>
           </div>
           <div className="flex items-center gap-1.5 flex-shrink-0">
-            <span className={`w-2 h-2 rounded-full ${conditionColor(asset.condition)}`} title={`Zustand: ${asset.condition}/5`} />
+            <span className={`w-2 h-2 rounded-full shrink-0 ${statusDotColor}`} title={`Status: ${AssetStatusLabels[asset.status] || asset.status}${asset.condition != null ? `, Zustand: ${asset.condition}/5` : ''}`} />
             <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase ${
               asset.status === 'available' ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300' :
               asset.status === 'loaned' ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300' :
