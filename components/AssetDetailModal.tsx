@@ -167,7 +167,7 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
-      <div className="bg-white dark:bg-[#0d1117] w-full max-w-5xl rounded-3xl overflow-hidden shadow-2xl border border-blue-500/20 flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
+      <div className="bg-white dark:bg-[#0d1117] w-full max-w-5xl h-[85vh] rounded-3xl overflow-hidden shadow-2xl border border-blue-500/20 flex flex-col shrink-0 animate-in zoom-in-95 duration-200">
         {/* Header */}
         <div className="p-6 bg-slate-900 dark:bg-[#010409] flex justify-between items-center border-b border-blue-900/30">
           <div>
@@ -233,8 +233,8 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
           </div>
         </div>
 
-        {/* Tab Content */}
-        <div className="overflow-y-auto p-8 flex-grow custom-scrollbar">
+        {/* Tab Content – eine Scrollbar, fester Bereich */}
+        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-8 custom-scrollbar">
           {isConfirmingDelete ? (
             <div className="h-full flex flex-col items-center justify-center py-12 text-center animate-in fade-in zoom-in-95 duration-200">
               <div className="w-20 h-20 bg-rose-50 dark:bg-rose-950 text-rose-500 rounded-full flex items-center justify-center mb-6">
@@ -1006,7 +1006,7 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
               {/* Edit Mode: Alle Felder bearbeitbar */}
               {editMode && (
                 <form onSubmit={handleSubmit} className="space-y-6">
-                  <div className="space-y-4 max-h-[60vh] overflow-y-auto custom-scrollbar">
+                  <div className="space-y-4">
                       {/* Allgemeine Felder */}
                       <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800">
                         <h4 className="text-xs font-black text-slate-700 dark:text-slate-300 uppercase italic tracking-tighter mb-3">Allgemein</h4>
