@@ -44,9 +44,6 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
           name === 'depreciationYears' || name === 'vehicleTaxMonthly') {
         return { ...prev, [name]: value ? parseFloat(value) : undefined };
       }
-      if (name === 'tags') {
-        return { ...prev, [name]: value ? value.split(',').map(t => t.trim()).filter(Boolean) : undefined };
-      }
       return { ...prev, [name]: value || undefined };
     });
   };
@@ -412,16 +409,6 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
                       <div>
                         <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Notizen</label>
                         <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">{formData.notes}</p>
-                      </div>
-                    )}
-                    {formData.tags && formData.tags.length > 0 && (
-                      <div>
-                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Tags</label>
-                        <div className="flex flex-wrap gap-2">
-                          {formData.tags.map((tag, idx) => (
-                            <span key={idx} className="px-3 py-1.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-lg text-sm font-bold">{tag}</span>
-                          ))}
-                        </div>
                       </div>
                     )}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -840,10 +827,6 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
                           <div>
                             <label className="block text-[9px] font-black text-slate-400 uppercase mb-1">Notizen</label>
                             <textarea name="notes" value={formData.notes || ''} onChange={handleChange} rows={2} className="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium outline-none dark:text-white" />
-                          </div>
-                          <div>
-                            <label className="block text-[9px] font-black text-slate-400 uppercase mb-1">Tags (komma-separiert)</label>
-                            <input type="text" name="tags" value={formData.tags?.join(', ') || ''} onChange={handleChange} className="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold outline-none dark:text-white" />
                           </div>
                           <div className="grid grid-cols-2 gap-3">
                             <div>

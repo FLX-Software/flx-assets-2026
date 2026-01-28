@@ -40,10 +40,6 @@ const AssetCreateModal: React.FC<AssetCreateModalProps> = ({ onClose, onSave, or
           name === 'depreciationYears' || name === 'vehicleTaxMonthly') {
         return { ...prev, [name]: value ? parseFloat(value) : undefined };
       }
-      if (name === 'tags') {
-        // Tags als komma-separierte Liste speichern
-        return { ...prev, [name]: value ? value.split(',').map(t => t.trim()).filter(Boolean) : undefined };
-      }
       return { ...prev, [name]: value || undefined };
     });
   };
@@ -208,11 +204,6 @@ const AssetCreateModal: React.FC<AssetCreateModalProps> = ({ onClose, onSave, or
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Notizen</label>
                   <textarea name="notes" value={formData.notes || ''} onChange={handleChange} rows={2} className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-medium outline-none dark:text-white" placeholder="Interne Notizen..." />
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Tags (komma-separiert)</label>
-                  <input type="text" name="tags" value={formData.tags?.join(', ') || ''} onChange={handleChange} className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 rounded-xl text-sm font-bold outline-none dark:text-white" placeholder="z.B. winterreifen, elektrisch, schwer" />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
