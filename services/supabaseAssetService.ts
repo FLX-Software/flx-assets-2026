@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabaseClient';
+import { supabase, supabaseUrl, supabaseAnonKey } from '../lib/supabaseClient';
 import { Asset, DBAsset, RepairEntry, DBMaintenanceEvent, assetToDBAsset, dbAssetToAsset } from '../types';
 
 export type FetchAssetsOptions = { loadMaintenance?: boolean };
@@ -241,23 +241,33 @@ export async function updateAsset(
 }
 
 /**
- * Aktualisiert nur die Bild-URL eines Assets (minimaler Payload, schnell).
- * Für Bild-Uploads statt volles updateAsset verwenden.
+ * Aktualisiert nur die Bild-URL eines Assets (minimaler Payload).
+ * Nutzt fetch() statt Supabase-Client, um hängende Verbindungen beim 2. Upload zu vermeiden.
  */
 export async function updateAssetImageUrl(
   assetId: string,
   organizationId: string,
   imageUrl: string
 ): Promise<void> {
-  const { error } = await supabase
-    .from('assets')
-    .update({ image_url: imageUrl })
-    .eq('id', assetId)
-    .eq('organization_id', organizationId);
-
-  if (error) {
-    console.error('❌ Fehler beim Aktualisieren der Bild-URL:', error);
-    throw error;
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token ?? supabaseAnonKey;
+  const res = await fetch(
+    `${supabaseUrl}/rest/v1/assets?id=eq.${encodeURIComponent(assetId)}&organization_id=eq.${encodeURIComponent(organizationId)}`,
+    {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': supabaseAnonKey,
+        'Authorization': `Bearer ${token}`,
+        'Prefer': 'return=minimal',
+      },
+      body: JSON.stringify({ image_url: imageUrl }),
+    }
+  );
+  if (!res.ok) {
+    const err = await res.text();
+    console.error('❌ Fehler beim Aktualisieren der Bild-URL:', res.status, err);
+    throw new Error(err || `Update fehlgeschlagen (${res.status})`);
   }
 }
 

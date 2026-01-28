@@ -301,16 +301,29 @@ const App: React.FC = () => {
 
   const handleSaveAssetImageUrl = async (assetId: string, imageUrl: string) => {
     if (!currentUser?.organizationId) return;
+    const orgId = currentUser.organizationId;
+    const attempt = async () => {
+      const timeout = 15000;
+      await Promise.race([
+        updateAssetImageUrl(assetId, orgId, imageUrl),
+        new Promise<never>((_, r) => setTimeout(() => r(new Error('Speichern-Timeout')), timeout)),
+      ]);
+    };
     try {
-      await updateAssetImageUrl(assetId, currentUser.organizationId, imageUrl);
-      setAssets((prev) => prev.map((a) => (a.id === assetId ? { ...a, imageUrl } : a)));
-      setSelectedAsset((prev) => (prev?.id === assetId ? { ...prev, imageUrl } : prev));
-      showNotification('Bild wurde aktualisiert.', 'success');
-    } catch (error: any) {
-      console.error('Fehler beim Speichern des Bildes:', error);
-      showNotification(error?.message || 'Fehler beim Speichern des Bildes.', 'error');
-      throw error;
+      await attempt();
+    } catch (first: any) {
+      await new Promise((r) => setTimeout(r, 2000));
+      try {
+        await attempt();
+      } catch (err: any) {
+        console.error('Fehler beim Speichern des Bildes (nach Retry):', err);
+        showNotification(err?.message || 'Fehler beim Speichern des Bildes.', 'error');
+        throw err;
+      }
     }
+    setAssets((prev) => prev.map((a) => (a.id === assetId ? { ...a, imageUrl } : a)));
+    setSelectedAsset((prev) => (prev?.id === assetId ? { ...prev, imageUrl } : prev));
+    showNotification('Bild wurde aktualisiert.', 'success');
   };
 
   const handleCreateAsset = async (newAsset: Asset) => {

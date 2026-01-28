@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect, lazy, Suspense } from 'react';
 import { Asset, AssetType, AssetTypeLabels, LoanRecord, RepairEntry, UserRole } from '../types';
 import MaintenanceTimeline from './MaintenanceTimeline';
 import { createMaintenanceEvent, updateMaintenanceEvent, deleteMaintenanceEvent } from '../services/supabaseAssetService';
-import { uploadAssetImage, deleteAssetImage } from '../services/supabaseStorageService';
+import { deleteAssetImage } from '../services/supabaseStorageService';
 import { compressImage, fileToBase64, shouldCompress } from '../services/imageCompressionService';
 
 // Lazy Loading für QRCodeDisplay um Initial-Loading zu vermeiden
@@ -29,7 +29,6 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const hasUploadedInSessionRef = useRef(false); // 2. Upload in gleicher Sitzung: Storage oft blockiert → Base64
   const [infoSubTab, setInfoSubTab] = useState<'basic' | 'general' | 'vehicle' | 'machine' | 'tool' | 'financial'>('basic');
   const [imageUpdateKey, setImageUpdateKey] = useState(0);
 
@@ -98,28 +97,8 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
       }
       const compressedFile = await compressImage(selectedFile!, { maxWidth: 1200, maxHeight: 1200, quality: 0.85 });
       const fileToUpload = compressedFile || selectedFile!;
-      const MAX_BASE64_SIZE = 50 * 1024;
-      const forceBase64AfterFirst = hasUploadedInSessionRef.current; // 2. Bild: Storage-Session oft blockiert
-      const shouldUseBase64 = fileToUpload.size < MAX_BASE64_SIZE || forceBase64AfterFirst;
-      let finalImageUrl: string;
-      if (shouldUseBase64) {
-        finalImageUrl = await fileToBase64(fileToUpload, { maxWidth: 800, quality: forceBase64AfterFirst ? 0.75 : 0.8 });
-      } else {
-        const abortController = new AbortController();
-        const uploadPromise = uploadAssetImage(fileToUpload, formData.id, organizationId, abortController.signal);
-        const timeoutPromise = new Promise<{ url: null; error: string }>((resolve) => {
-          setTimeout(() => {
-            abortController.abort();
-            resolve({ url: null, error: 'Upload-Timeout' });
-          }, 8000);
-        });
-        const uploadResult = await Promise.race([uploadPromise, timeoutPromise]);
-        if (uploadResult.error) {
-          finalImageUrl = await fileToBase64(fileToUpload, { maxWidth: 800, quality: 0.75 });
-        } else {
-          finalImageUrl = uploadResult.url;
-        }
-      }
+      // Immer Base64 im Modal: einheitlicher Ablauf, kein Storage – verhindert „2. Bild hängt“
+      const finalImageUrl = await fileToBase64(fileToUpload, { maxWidth: 800, quality: 0.78 });
       setFormData((prev) => ({ ...prev, imageUrl: finalImageUrl }));
       setSelectedFile(null);
       setImageUpdateKey((k) => k + 1);
@@ -128,7 +107,6 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, history, onC
       } else {
         await onSave({ ...formData, imageUrl: finalImageUrl });
       }
-      hasUploadedInSessionRef.current = true;
       setImageUpdateKey((k) => k + 1);
     };
 
