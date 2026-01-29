@@ -89,7 +89,10 @@ if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' }).then(registration => {
       console.log('SW registered: ', registration);
-      
+      // Navigation Preload: Dokument parallel laden, reduziert Latenz bei SW-Kontrolle
+      if (registration.navigationPreload?.enable) {
+        registration.navigationPreload.enable().catch(() => {});
+      }
       // Prüfe auf Updates
       registration.addEventListener('updatefound', () => {
         const newWorker = registration.installing;

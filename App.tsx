@@ -82,7 +82,7 @@ const App: React.FC = () => {
 
   // Auth-State-Listener: Auto-Login nach Reload
   useEffect(() => {
-    const AUTH_CHECK_TIMEOUT_MS = 12000; // Nach 12s ohne Ergebnis → Login anzeigen (kein Endlos-Spinner)
+    const AUTH_CHECK_TIMEOUT_MS = 18000; // Nach 18s ohne Ergebnis → Login (SW/Cache können erste Requests verzögern)
 
     const { data: { subscription } } = onAuthStateChange(async (user) => {
       if (user) {

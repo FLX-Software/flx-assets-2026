@@ -1,44 +1,61 @@
-const CACHE_NAME = 'flx-assets-v2';
-const ASSETS_TO_CACHE = [
-  '/',
-  '/index.html',
-  '/manifest.json'
-];
+// Cache-Version: Bei Änderungen alte Caches löschen
+const CACHE_NAME = 'flx-assets-v4';
 
-// Assets die NICHT gecacht werden sollen (z.B. JS-Module)
+// Nur manifest für PWA-Install – HTML/JS nie pre-cachen (verhindert Stale nach Deploy)
+const ASSETS_TO_CACHE = ['/manifest.json'];
+
+// Assets die NICHT gecacht werden sollen
 const NO_CACHE_PATTERNS = [
   /\/assets\/.*\.js$/,
   /\/assets\/.*\.mjs$/,
   /\/assets\/.*\.css$/,
+  /\/index\.html$/,
+  /^\/$/,  // Root
 ];
 
-// API / Daten-Requests: niemals cachen, immer cache: 'no-store'
-// Verhindert "zweiter Aufruf funktioniert nicht"-Bug durch Stale-Responses
+// API / Daten-Requests: niemals cachen, immer frisch
 const API_OR_DATA_PATTERNS = [
   /supabase\.co/i,
+  /supabase\.in/i,
   /\/rest\/v1\//i,
   /\/auth\/v1\//i,
   /\/realtime\//i,
+  /\/storage\/v1\//i,
 ];
 
 function isApiOrDataRequest(url) {
-  return API_OR_DATA_PATTERNS.some(function(p) { return p.test(url); });
+  return API_OR_DATA_PATTERNS.some(function (p) {
+    return p.test(url);
+  });
 }
 
-self.addEventListener('install', function(event) {
+function isNavigationRequest(request) {
+  return request.mode === 'navigate';
+}
+
+function isDocumentRequest(request, url) {
+  try {
+    var u = new URL(url);
+    return u.pathname === '/' || u.pathname === '/index.html';
+  } catch (_) {
+    return false;
+  }
+}
+
+self.addEventListener('install', function (event) {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(function(cache) {
+    caches.open(CACHE_NAME).then(function (cache) {
       return cache.addAll(ASSETS_TO_CACHE);
     })
   );
   self.skipWaiting();
 });
 
-self.addEventListener('activate', function(event) {
+self.addEventListener('activate', function (event) {
   event.waitUntil(
-    caches.keys().then(function(cacheNames) {
+    caches.keys().then(function (cacheNames) {
       return Promise.all(
-        cacheNames.map(function(cacheName) {
+        cacheNames.map(function (cacheName) {
           if (cacheName !== CACHE_NAME) {
             return caches.delete(cacheName);
           }
@@ -49,43 +66,77 @@ self.addEventListener('activate', function(event) {
   return self.clients.claim();
 });
 
-self.addEventListener('fetch', function(event) {
+self.addEventListener('fetch', function (event) {
   var url = event.request.url;
+  var request = event.request;
 
-  // API / Supabase: nie cachen, immer frisch vom Netz (cache: 'no-store')
-  if (isApiOrDataRequest(url) || event.request.method !== 'GET') {
+  // 1. API / Supabase: Immer durchreichen, nie cachen, credentials erhalten
+  if (isApiOrDataRequest(url) || request.method !== 'GET') {
     event.respondWith(
-      fetch(event.request, { cache: 'no-store' })
+      fetch(request, {
+        cache: 'no-store',
+        credentials: request.credentials,
+      }).catch(function (err) {
+        console.error('[SW] API fetch failed:', url, err);
+        throw err;
+      })
+    );
+    return;
+  }
+
+  // 2. Navigation / HTML-Dokument: NIEMALS cachen – immer frisch vom Netz
+  // Verhindert: Stale HTML nach Deploy, falsche JS-Referenzen, Auth-Probleme
+  // Nutze Navigation Preload wenn verfügbar (schnellerer First Load)
+  if (isNavigationRequest(request) || isDocumentRequest(request, url)) {
+    event.respondWith(
+      (event.preloadResponse || Promise.resolve(null))
+        .then(function (preloadResponse) {
+          if (preloadResponse) return preloadResponse;
+          return fetch(request, {
+            cache: 'no-store',
+            credentials: request.credentials,
+          });
+        })
+        .catch(function () {
+          return caches.match(request);
+        })
     );
     return;
   }
 
   var urlObj = new URL(url);
-  var shouldCache = !NO_CACHE_PATTERNS.some(function(p) { return p.test(urlObj.pathname); });
+  var shouldCache = !NO_CACHE_PATTERNS.some(function (p) {
+    return p.test(urlObj.pathname);
+  });
 
+  // 3. JS/CSS (hashed): Nicht cachen, immer frisch
   if (!shouldCache) {
     event.respondWith(
-      fetch(event.request, { cache: 'no-store' }).catch(function() {
-        return caches.match(event.request);
+      fetch(request, { cache: 'no-store' }).catch(function () {
+        return caches.match(request);
       })
     );
     return;
   }
 
-  // Nur statische Same-Origin-Seiten: Network-First, bei Erfolg cachen
+  // 4. Sonstige statische Assets (z.B. Favicon): Network-First, bei Erfolg cachen
   event.respondWith(
-    fetch(event.request, { cache: 'no-store' })
-      .then(function(response) {
-        if (event.request.method === 'GET' && response.status === 200 && response.type === 'basic') {
+    fetch(request, { cache: 'no-store' })
+      .then(function (response) {
+        if (
+          request.method === 'GET' &&
+          response.status === 200 &&
+          response.type === 'basic'
+        ) {
           var responseToCache = response.clone();
-          caches.open(CACHE_NAME).then(function(cache) {
-            cache.put(event.request, responseToCache);
+          caches.open(CACHE_NAME).then(function (cache) {
+            cache.put(request, responseToCache);
           });
         }
         return response;
       })
-      .catch(function() {
-        return caches.match(event.request);
+      .catch(function () {
+        return caches.match(request);
       })
   );
 });

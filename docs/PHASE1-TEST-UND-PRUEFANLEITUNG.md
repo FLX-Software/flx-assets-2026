@@ -114,8 +114,8 @@ Kein endloser Spinner; bei Fehlern und bei Timeout klare Meldungen und sauberer 
 Bei fehlender oder ungültiger Session nicht ewig im Ladezustand bleiben, sondern z. B. nach Timeout die Login-Seite anzeigen.
 
 ### Was wurde umgesetzt
-- **App.tsx:** Beim Start wird `getCurrentUser()` mit einem **Timeout von 12 Sekunden** per `Promise.race` ausgeführt.  
-- Läuft der Auth-Check länger als 12 s (z. B. Netzwerk hängt, Supabase antwortet nicht), gilt die Session als nicht verfügbar: Ladezustand wird beendet, Nutzerdaten werden geleert, die **Login-Ansicht** wird angezeigt.
+- **App.tsx:** Beim Start wird `getCurrentUser()` mit einem **Timeout von 18 Sekunden** per `Promise.race` ausgeführt.  
+- Läuft der Auth-Check länger als 18 s (z. B. Netzwerk hängt, Supabase antwortet nicht, SW/Cache verzögern), gilt die Session als nicht verfügbar: Ladezustand wird beendet, Nutzerdaten werden geleert, die **Login-Ansicht** wird angezeigt.
 
 ### Tests (Session)
 
@@ -132,19 +132,19 @@ Bei fehlender oder ungültiger Session nicht ewig im Ladezustand bleiben, sonder
 #### 3.3 Auth-Check-Timeout (künstlich provozieren)
 1. In den Developer Tools (F12) unter „Network“ die Verbindung drosseln (z. B. „Slow 3G“) oder in `lib/supabaseClient.ts` / Auth-Service temporär eine Verzögerung einbauen, sodass `getCurrentUser()` bzw. `loadUserWithOrganizations` länger als 12 s braucht.
 2. App im „nicht eingeloggt“-Zustand öffnen (z. B. Cache leeren, in einem privaten Fenster öffnen) und neu laden.
-3. **Erwartung:** Nach höchstens etwa 12 Sekunden erscheint die **Login-Seite**, in der Konsole ggf. „Auth-Check Timeout – zeige Login.“. **Kein** Spinner, der dauerhaft bleibt.
+3. **Erwartung:** Nach höchstens etwa 18 Sekunden erscheint die **Login-Seite**, in der Konsole ggf. „Auth-Check Timeout – zeige Login.“. **Kein** Spinner, der dauerhaft bleibt.
 
 #### 3.4 Service Worker / Cache (optional)
 1. PWA bereits installiert bzw. SW aktiv.
 2. Einloggen, dann Session serverseitig oder im Storage invalidieren.
 3. Seite neu laden.
-4. **Erwartung:** Spätestens nach dem Auth-Check-Timeout (12 s) erscheint die Login-Seite.  
+4. **Erwartung:** Spätestens nach dem Auth-Check-Timeout (18 s) erscheint die Login-Seite.  
    Falls du Caching-Probleme vermutest: im Application-Tab „Clear storage“ / „Cache leeren“ und erneut testen.
 
 #### 3.5 Kurz-Checkliste Session
 - [ ] Reload bei gültiger Session → kurz Ladeanzeige, dann normaler Inhalt
 - [ ] Reload ohne Session → kurz Ladeanzeige, dann Login
-- [ ] Auth-Check dauert > 12 s → Login wird angezeigt, kein Endlos-Spinner
+- [ ] Auth-Check dauert > 18 s → Login wird angezeigt, kein Endlos-Spinner
 
 ---
 
