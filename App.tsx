@@ -230,12 +230,22 @@ const App: React.FC = () => {
   };
 
   const handleLogout = async () => {
-    await signOut();
+    // Sofort lokalen State leeren (optimistic), damit UI reagiert
     setCurrentUser(null);
     setAssets([]);
     setHistory([]);
     setUsers([]);
+    setIsLoading(false);
     showNotification(`Auf Wiedersehen!`, 'success');
+    try {
+      const timeout = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Logout-Timeout')), 5000)
+      );
+      await Promise.race([signOut(), timeout]);
+    } catch (e) {
+      console.warn('Logout (Supabase):', e);
+      // Lokaler State bereits geleert, Login wird angezeigt
+    }
   };
 
   const handleQRScan = useCallback(async (decodedText: string) => {
@@ -416,7 +426,7 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen pb-12 bg-slate-50 dark:bg-[#010409] text-slate-900 dark:text-slate-100 transition-colors duration-300 overflow-x-hidden">
       {/* Navigation / Header */}
-      <nav className="bg-[#010409] text-white pt-[max(1rem,env(safe-area-inset-top))] px-4 pb-4 sticky top-0 z-30 shadow-2xl border-b border-blue-900/30">
+      <nav className="bg-[#010409] text-white pt-[max(1rem,env(safe-area-inset-top))] px-4 pb-4 sticky top-0 z-50 shadow-2xl border-b border-blue-900/30">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="flex flex-col">
             <div className="flex items-baseline gap-2 flex-wrap">
@@ -517,8 +527,7 @@ const App: React.FC = () => {
               </div>
               <button 
                 onClick={handleLogout}
-                disabled={isLoading}
-                className="min-touch flex items-center justify-center p-2.5 bg-rose-600/20 hover:bg-rose-600 text-rose-500 hover:text-white rounded-xl transition-all disabled:opacity-50"
+                className="min-touch flex items-center justify-center p-2.5 bg-rose-600/20 hover:bg-rose-600 text-rose-500 hover:text-white rounded-xl transition-all"
                 title="Abmelden"
                 aria-label="Abmelden"
               >
